@@ -32,7 +32,7 @@ impl CarmentaWindow {
         stack.add_titled(&emoji_page, Some("emoji"), "Emoji");
 
         // -- Kaomoji Page --
-        let kaomoji_page = gtk4::Label::new(Some("(╯°□°)╯︵ ┻━┻"));
+        let kaomoji_page = crate::ui::kaomoji_grid::create_kaomoji_grid(&search_entry);
         stack.add_titled(&kaomoji_page, Some("kaomoji"), "Kaomoji");
 
         // -- Clipboard Page --
