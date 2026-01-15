@@ -7,36 +7,69 @@ import GLib from "gi://GLib";
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
 import { Extension } from "resource:///org/gnome/shell/extensions/extension.js";
 
-const DBusInterface = `
+const ServiceIface = `
 <node>
   <interface name="org.gnome.Shell.Extensions.Carmenta">
     <method name="Ping">
       <arg type="s" direction="out" name="response" />
     </method>
     <method name="InsertText">
-        <arg type="s" direction="in" name="text" />
+      <arg type="s" direction="in" name="text" />
+    </method>
+    <method name="PinWindow">
+      <arg type="b" direction="in" name="pinned" />
     </method>
   </interface>
 </node>`;
 
 export default class CarmentaExtension extends Extension {
-  enable() {
+  constructor(uuid) {
+    super(uuid);
+    this._uuid = uuid;
+    this._dbus = null;
+    this._appId = "org.carmenta.App";
     this._lastFocusedWindow = null;
-    this._windowFocusId = global.display.connect("notify::focus-window", () => {
-      let win = global.display.focus_window;
-      // Ignorujemy nasze własne okno (zakładamy, że WM_CLASS/AppID to 'org.carmenta.App' lub 'Carmenta')
-      if (win) {
-        const wmClass = win.get_wm_class();
-        // TODO: Sprawdzić jaki dokładnie wm_class ma apka.
-        // Na razie, jeśli to NIE jest Carmenta, to zapamiętujemy.
-        if (wmClass && !wmClass.toLowerCase().includes("carmenta")) {
-          this._lastFocusedWindow = win;
-          // console.log(`Carmenta: Tracking focus: ${wmClass}`);
-        }
-      }
-    });
+    this._windowFocusId = null;
+    this._dbusImpl = null;
+    this._ownNameId = null;
+    this._virtualDevice = null;
+  }
 
-    this._dbusImpl = Gio.DBusExportedObject.wrapJSObject(DBusInterface, this);
+  enable() {
+    console.log("Carmenta: Enabling extension");
+    this._registerDBus();
+    this._registerKeybinding();
+    this._trackFocus();
+
+    // Virtual Keyboard device setup
+    this._virtualDevice = Clutter.get_default_backend()
+      .get_default_seat()
+      .create_virtual_device(
+        Clutter.InputDeviceType.KEYBOARD_DEVICE,
+        "Carmenta Virtual Keyboard",
+      );
+
+    console.log("Carmenta: Extension enabled");
+  }
+
+  disable() {
+    console.log("Carmenta: Disabling extension");
+    this._unregisterDBus();
+    this._unregisterKeybinding();
+    this._untrackFocus();
+    this._dbus = null;
+
+    if (this._virtualDevice) {
+      // Virtual devices are destroyed automatically when seat is disposed,
+      // but explicitly clearing reference is good.
+      // run_dispose() is not exposed to JS usually, just null it.
+    }
+    this._virtualDevice = null;
+    this._lastFocusedWindow = null;
+  }
+
+  _registerDBus() {
+    this._dbusImpl = Gio.DBusExportedObject.wrapJSObject(ServiceIface, this);
     this._dbusImpl.export(
       Gio.DBus.session,
       "/org/gnome/Shell/Extensions/Carmenta",
@@ -54,17 +87,20 @@ export default class CarmentaExtension extends Extension {
         console.log(`Carmenta: Lost name ${name}`);
       },
     );
+  }
 
-    // Virtual Keyboard device setup
-    this._virtualDevice = Clutter.get_default_backend()
-      .get_default_seat()
-      .create_virtual_device(
-        Clutter.InputDeviceType.KEYBOARD_DEVICE,
-        "Carmenta Virtual Keyboard",
-      );
+  _unregisterDBus() {
+    if (this._dbusImpl) {
+      this._dbusImpl.unexport();
+      this._dbusImpl = null;
+    }
+    if (this._ownNameId) {
+      Gio.bus_unown_name(this._ownNameId);
+      this._ownNameId = null;
+    }
+  }
 
-    console.log("Carmenta: Extension enabled");
-
+  _registerKeybinding() {
     Main.wm.addKeybinding(
       "carmenta-shortcut",
       this.getSettings(),
@@ -76,59 +112,104 @@ export default class CarmentaExtension extends Extension {
     );
   }
 
-  disable() {
+  _unregisterKeybinding() {
+    Main.wm.removeKeybinding("carmenta-shortcut");
+  }
+
+  _trackFocus() {
+    this._windowFocusId = global.display.connect("notify::focus-window", () => {
+      let win = global.display.focus_window;
+      // Ignore our own window
+      if (win) {
+        const wmClass = win.get_wm_class();
+        if (wmClass && !wmClass.toLowerCase().includes("carmenta")) {
+          this._lastFocusedWindow = win;
+        }
+      }
+    });
+  }
+
+  _untrackFocus() {
     if (this._windowFocusId) {
       global.display.disconnect(this._windowFocusId);
       this._windowFocusId = null;
     }
-
-    if (this._ownNameId) {
-      Gio.bus_unown_name(this._ownNameId);
-      this._ownNameId = null;
-    }
-
-    if (this._dbusImpl) {
-      this._dbusImpl.unexport();
-      this._dbusImpl = null;
-    }
-
-    // Virtual devices are destroyed automatically when seat is disposed,
-    // but explicitly clearing reference is good.
-    this._virtualDevice = null;
-    this._lastFocusedWindow = null;
-
-    Main.wm.removeKeybinding("carmenta-shortcut");
   }
 
+  // DBus Methods
   Ping() {
     return "Pong";
   }
 
-  InsertText(text) {
-    console.log(`Carmenta: Injecting text: ${text}`);
-
-    // 1. Aktywuj poprzednie okno
-    if (this._lastFocusedWindow) {
-      Main.activateWindow(this._lastFocusedWindow);
+  PinWindow(pinned) {
+    // Find Carmenta Window
+    let carmentaWin = this._findCarmentaWindow();
+    if (carmentaWin) {
+      if (pinned) {
+        carmentaWin.make_above();
+        carmentaWin.stick(); // Make it visible on all workspaces (optional, but good for widgets)
+        console.log("Carmenta: Window set to ALWAYS ON TOP + STICKY");
+      } else {
+        carmentaWin.unmake_above();
+        carmentaWin.unstick();
+      }
     } else {
-      console.warn("Carmenta: No last window found to paste into!");
+      console.log("Carmenta: Window not found for pinning");
     }
+  }
 
-    // 2. Skopiuj do schowka
+  InsertText(text) {
+    console.log(`Carmenta: Injecting text '${text}'`);
+
+    if (this._lastFocusedWindow) {
+      // 1. Activate target
+      this._lastFocusedWindow.activate(global.get_current_time());
+
+      // 2. Copy and Paste
+      // We use a small timeout to allow focus switch to target
+      GLib.timeout_add(GLib.PRIORITY_DEFAULT, 10, () => {
+        this._copyToClipboard(text);
+        this._sendCtrlV();
+
+        // 3. Return Focus to Carmenta (Boomerang)
+        // We wait slightly longer to ensure Ctrl+V was registered by the target
+        GLib.timeout_add(GLib.PRIORITY_DEFAULT, 50, () => {
+          let carmentaWin = this._findCarmentaWindow();
+          if (carmentaWin) {
+            carmentaWin.activate(global.get_current_time());
+            // Re-enforce above state just in case
+            carmentaWin.make_above();
+            console.log("Carmenta: Focus returned");
+          }
+          return GLib.SOURCE_REMOVE;
+        });
+
+        return GLib.SOURCE_REMOVE;
+      });
+    } else {
+      console.log("Carmenta: No last focused window found");
+      this._copyToClipboard(text);
+    }
+  }
+
+  _findCarmentaWindow() {
+    let windows = global.display.get_tab_list(Meta.TabList.NORMAL, null);
+    return windows.find((w) => {
+      let wmClass = w.get_wm_class();
+      // Check for 'org.carmenta.App' or simple 'carmenta'
+      return wmClass && wmClass.toLowerCase().includes("carmenta");
+    });
+  }
+
+  _copyToClipboard(text) {
     const clipboard = St.Clipboard.get_default();
     clipboard.set_text(St.ClipboardType.CLIPBOARD, text);
-
-    // 3. Wyślij Ctrl+V (z małym opóźnieniem, żeby okno zdążyło dostać fokus)
-    GLib.timeout_add(GLib.PRIORITY_DEFAULT, 100, () => {
-      this._sendCtrlV();
-      return GLib.SOURCE_REMOVE;
-    });
   }
 
   _sendCtrlV() {
     if (!this._virtualDevice) return;
 
-    const time = Clutter.get_current_event_time();
+    const time = Clutter.get_current_event_time(); // Or global.get_current_time()
 
     // Ctrl down
     this._virtualDevice.notify_keyval(
@@ -158,11 +239,7 @@ export default class CarmentaExtension extends Extension {
 
   _spawnApp() {
     try {
-      // Tymczasowo logujemy
-      console.log("Carmenta: Shortcut pressed!");
-      Main.notify("Carmenta", "Shortcut pressed!");
-
-      // Tutaj docelowo spawnujemy proces
+      console.log("Carmenta: Shortcut pressed via Extension (Log only)");
     } catch (e) {
       console.error(e);
     }

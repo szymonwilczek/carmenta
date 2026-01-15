@@ -1,26 +1,81 @@
 use zbus::Connection;
 use gtk4::gdk;
 use gtk4::prelude::*;
+use std::cell::RefCell;
 
 pub struct DBusClient;
 
+thread_local! {
+    static CONNECTION: RefCell<Option<Connection>> = RefCell::new(None);
+}
+
 impl DBusClient {
-    pub async fn insert_or_copy(text: &str) {
-        match Self::try_insert_via_extension(text).await {
-            Ok(_) => println!("Inserted via extension: {}", text),
-            Err(e) => {
-                println!("Extension error: {}. Fallback to Clipboard.", e);
-                Self::copy_to_clipboard(text);
-            }
+    pub fn insert_or_copy(text: &str) {
+        // Fire and forget on the runtime
+        let text_owned = text.to_string();
+        if let Some(rt) = crate::RUNTIME.get() {
+            rt.spawn(async move {
+                 match Self::try_insert_via_extension(&text_owned).await {
+                    Ok(_) => {},
+                    Err(e) => {
+                        eprintln!("DBus error: {}", e);
+                        // Fallback requires Main Thread access. 
+                        let text_clone = text_owned.clone();
+                        gtk4::glib::MainContext::default().spawn_local(async move {
+                            Self::copy_to_clipboard(&text_clone);
+                        });
+                    }
+                 }
+            });
+        } else {
+            eprintln!("Runtime not initialized!");
         }
     }
 
+    pub fn pin_window(pinned: bool) {
+        if let Some(rt) = crate::RUNTIME.get() {
+            rt.spawn(async move {
+                if let Ok(conn) = Connection::session().await {
+                     let _ = conn.call_method(
+                        Some("org.gnome.Shell.Extensions.Carmenta"), 
+                        "/org/gnome/Shell/Extensions/Carmenta",    
+                        Some("org.gnome.Shell.Extensions.Carmenta"), 
+                        "PinWindow",
+                        &(pinned),
+                    ).await;
+                }
+            });
+        }
+    }
+
+    async fn get_connection() -> anyhow::Result<Connection> {
+        // Check cache first
+        let conn = CONNECTION.with(|cell| {
+            cell.borrow().clone()
+        });
+
+        if let Some(c) = conn {
+            return Ok(c);
+        }
+
+        // Establish new connection
+        let new_conn = Connection::session().await?;
+        
+        // Cache it
+        CONNECTION.with(|cell| {
+            *cell.borrow_mut() = Some(new_conn.clone());
+        });
+
+        Ok(new_conn)
+    }
+
     async fn try_insert_via_extension(text: &str) -> anyhow::Result<()> {
-        let connection = Connection::session().await?;
+        let connection = Self::get_connection().await?;
+        
         let _reply = connection.call_method(
-            Some("org.gnome.Shell.Extensions.Carmenta"), // Bus Name
-            "/org/gnome/Shell/Extensions/Carmenta",    // Object Path
-            Some("org.gnome.Shell.Extensions.Carmenta"), // Interface
+            Some("org.gnome.Shell.Extensions.Carmenta"), 
+            "/org/gnome/Shell/Extensions/Carmenta",    
+            Some("org.gnome.Shell.Extensions.Carmenta"), 
             "InsertText",
             &(text),
         ).await?;

@@ -2,15 +2,16 @@ use gtk4::prelude::*;
 use gtk4::{
     gio, glib, GridView, SignalListItemFactory, SingleSelection, 
     PolicyType, ScrolledWindow, Box, Orientation, ToggleButton, 
-    CustomFilter, FilterListModel
+    CustomFilter, FilterListModel, Label
 };
-use super::emoji_data::EmojiObject;
+use gtk4::subclass::prelude::ObjectSubclassIsExt;
+use super::emoji_data::EmojiObject; 
 use crate::ui::emoji_data::imp::EmojiCategory;
 use crate::dbus::DBusClient;
 use std::cell::RefCell;
 use std::rc::Rc;
 
-pub fn create_emoji_grid() -> Box {
+pub fn create_emoji_grid(search_entry: &gtk4::SearchEntry) -> Box {
     // Top container: Categories + Grid
     let container = Box::new(Orientation::Horizontal, 0);
     container.set_css_classes(&["emoji-page"]);
@@ -25,8 +26,10 @@ pub fn create_emoji_grid() -> Box {
     // 2. Data Store & Filter
     let store = gio::ListStore::new::<EmojiObject>();
     
-    // Populate store (Async usually better, but keeping sync for MVP step)
-    let mut all_emojis = Vec::new();
+    // Populate store 
+    let start_load = std::time::Instant::now();
+    let mut all_emojis = Vec::with_capacity(4000); // Pre-allocate
+    
     for e in emojis::iter() {
         let cat = match e.group() {
             emojis::Group::SmileysAndEmotion => EmojiCategory::SmileysAndPeople,
@@ -38,30 +41,56 @@ pub fn create_emoji_grid() -> Box {
             emojis::Group::Objects => EmojiCategory::Objects,
             emojis::Group::Symbols => EmojiCategory::Symbols,
             emojis::Group::Flags => EmojiCategory::Flags,
-            _ => EmojiCategory::Symbols, // Fallback
+            _ => EmojiCategory::Symbols, 
         };
+
+        // Inject keywords (just English name + shortcode for now)
+        let mut keys = vec![e.name().to_string()];
+        if let Some(short) = e.shortcode() {
+            keys.push(short.to_string());
+        }
 
         all_emojis.push(EmojiObject::new(
             e.as_str().to_string(), 
             e.name().to_string(),
-            cat
+            cat,
+            keys
         ));
     }
     store.extend_from_slice(&all_emojis);
 
-    // Current Category State
-    // We use a shared state to update the filter
+    // Filter Logic
     let current_category = Rc::new(RefCell::new(EmojiCategory::SmileysAndPeople));
+    let current_query = Rc::new(RefCell::new(String::new()));
     
-    let filter = CustomFilter::new(glib::clone!(@strong current_category => move |obj| {
+    let filter = CustomFilter::new(glib::clone!(@strong current_category, @strong current_query => move |obj| {
         let emoji_obj = obj.downcast_ref::<EmojiObject>().unwrap();
-        // Show if category matches
-        // TODO: Handle 'Recent' handling later
+        let query = current_query.borrow(); // Already lowercased by the signal handler
+        
+        // If query is present, ignore category and search ALL emojis
+        if !query.is_empty() {
+             // Access cached lowercased name directly for zero-allocation check
+             let imp = emoji_obj.imp();
+             if imp.name_lower.borrow().contains(query.as_str()) { return true; }
+             
+             for k in imp.keywords_lower.borrow().iter() {
+                 if k.contains(query.as_str()) { return true; }
+             }
+             return false;
+        }
+
+        // If no query, check Category
         emoji_obj.category() == *current_category.borrow()
     }));
 
     let filter_model = FilterListModel::new(Some(store), Some(filter.clone()));
     let selection_model = SingleSelection::new(Some(filter_model));
+
+    // Connect Search Entry
+    search_entry.connect_search_changed(glib::clone!(@weak filter, @strong current_query => move |entry: &gtk4::SearchEntry| {
+        *current_query.borrow_mut() = entry.text().to_string().to_lowercase();
+        filter.changed(gtk4::FilterChange::Different);
+    }));
 
     // 3. Category Buttons
     let categories = vec![
@@ -76,9 +105,6 @@ pub fn create_emoji_grid() -> Box {
         ("🇺🇳", EmojiCategory::Flags, "Flags"),
     ];
 
-    let group = gtk4::CheckButton::builder().build(); 
-    
-    // First button ref to set group
     let mut first_btn: Option<ToggleButton> = None;
 
     for (icon, cat, tooltip) in categories {
@@ -117,10 +143,7 @@ pub fn create_emoji_grid() -> Box {
          item.set_child(Some(&button));
          button.connect_clicked(move |btn| {
              let text = btn.label().unwrap_or_default().to_string();
-             let ctx = glib::MainContext::default();
-             ctx.spawn_local(async move {
-                 DBusClient::insert_or_copy(&text).await;
-             });
+             DBusClient::insert_or_copy(&text);
          });
     });
 

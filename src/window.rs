@@ -24,18 +24,14 @@ impl CarmentaWindow {
         content.append(&search_entry);
 
         // 2. View Stack (Tabs)
+        let start_win = std::time::Instant::now();
         let stack = libadwaita::ViewStack::new();
         
         // -- Emoji Page --
-        let emoji_page = crate::ui::emoji_grid::create_emoji_grid();
+        let emoji_page = crate::ui::emoji_grid::create_emoji_grid(&search_entry);
+        println!("Window: Emoji Grid creation took {:.2?}", start_win.elapsed());
         // emoji_page is now a gtk::Box, which implements IsA<Widget>, so this is fine.
         stack.add_titled(&emoji_page, Some("emoji"), "Emoji");
-
-        /* 
-        // Old Dummy Logic
-        let emoji_page = Box::new(Orientation::Vertical, 12);
-        // ...
-        */
 
         // -- Kaomoji Page --
         let kaomoji_page = gtk4::Label::new(Some("(╯°□°)╯︵ ┻━┻"));
@@ -63,9 +59,14 @@ impl CarmentaWindow {
             .application(app)
             .title("Carmenta")
             .content(&main_box)
-            .default_width(400) // Węższe, bardziej jak "popover"
-            .default_height(500)
+            .default_width(420)
+            .default_height(480)
+            .modal(false) // Non-modal to interact with other apps
+            .decorated(true) 
             .build();
+            
+        // Pin window to stay on top
+        crate::dbus::DBusClient::pin_window(true);
 
         Self { window }
     }
