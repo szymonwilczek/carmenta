@@ -2,6 +2,7 @@ mod app;
 mod window;
 mod dbus;
 mod ui;
+mod history;
 
 #[allow(unused_imports)]
 use app::CarmentaApp;

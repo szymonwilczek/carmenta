@@ -57,6 +57,30 @@ pub fn create_emoji_grid(search_entry: &gtk4::SearchEntry) -> Box {
             keys
         ));
     }
+
+    // 2.1 Load Recent Emojis
+    // We duplicate the EmojiObjects for the Recent category so they can exist independently
+    // and be sorted by recency.
+    let recent_chars = crate::history::get_recent();
+    for char_str in recent_chars {
+        // Find the original data to copy metadata keywords/name
+        // Optimization: Create a lookup map if this is slow, but for 50 items linear scan of 4000 is okay-ish (50 * 4000 = 200k ops, < 1ms)
+        // Actually, we can just find it in all_emojis.
+        if let Some(original) = all_emojis.iter().find(|e| e.emoji() == char_str) {
+             let imp = original.imp();
+             let name = imp.name.borrow().clone();
+             let keywords = imp.keywords.borrow().clone();
+             
+             let recent_obj = EmojiObject::new(
+                 char_str.clone(),
+                 name,
+                 EmojiCategory::Recent,
+                 keywords
+             );
+             all_emojis.push(recent_obj);
+        }
+    }
+
     store.extend_from_slice(&all_emojis);
 
     // Filter Logic
@@ -146,6 +170,10 @@ pub fn create_emoji_grid(search_entry: &gtk4::SearchEntry) -> Box {
              // Mark insertion in progress so window doesn't close on focus loss
              crate::app::IS_INSERTING.with(|flag| *flag.borrow_mut() = true);
              
+             // Save to History
+             let text_clone = text.clone();
+             crate::history::add_recent(text_clone);
+
              // Safety net: Reset flag after 1 second just in case focus never returns
              glib::timeout_add_local(std::time::Duration::from_millis(500), || {
                  crate::app::IS_INSERTING.with(|flag| *flag.borrow_mut() = false);
