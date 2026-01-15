@@ -24,10 +24,10 @@ pub fn create_emoji_grid(search_entry: &gtk4::SearchEntry) -> Box {
     sidebar.set_margin_bottom(6);
     
     // 2. Data Store & Filter
+    // 2. Data Store & Filter
     let store = gio::ListStore::new::<EmojiObject>();
     
     // Populate store 
-    let start_load = std::time::Instant::now();
     let mut all_emojis = Vec::with_capacity(4000); // Pre-allocate
     
     for e in emojis::iter() {
@@ -143,6 +143,15 @@ pub fn create_emoji_grid(search_entry: &gtk4::SearchEntry) -> Box {
          item.set_child(Some(&button));
          button.connect_clicked(move |btn| {
              let text = btn.label().unwrap_or_default().to_string();
+             // Mark insertion in progress so window doesn't close on focus loss
+             crate::app::IS_INSERTING.with(|flag| *flag.borrow_mut() = true);
+             
+             // Safety net: Reset flag after 1 second just in case focus never returns
+             glib::timeout_add_local(std::time::Duration::from_millis(500), || {
+                 crate::app::IS_INSERTING.with(|flag| *flag.borrow_mut() = false);
+                 glib::ControlFlow::Break
+             });
+             
              DBusClient::insert_or_copy(&text);
          });
     });

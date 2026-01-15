@@ -1,7 +1,14 @@
 use gtk4::prelude::*;
-use libadwaita::prelude::ApplicationExt;
-use libadwaita::Application;
+use libadwaita::prelude::*;
+use libadwaita::{Application, ApplicationWindow};
+use gtk4::glib;
+use std::cell::RefCell;
 use crate::window::CarmentaWindow;
+
+// Global state to track if we are in the middle of an insertion (and thus expecting focus loss)
+thread_local! {
+    pub static IS_INSERTING: RefCell<bool> = RefCell::new(false);
+}
 
 pub struct CarmentaApp {
     app: Application,

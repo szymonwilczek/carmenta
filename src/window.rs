@@ -24,12 +24,10 @@ impl CarmentaWindow {
         content.append(&search_entry);
 
         // 2. View Stack (Tabs)
-        let start_win = std::time::Instant::now();
         let stack = libadwaita::ViewStack::new();
         
         // -- Emoji Page --
         let emoji_page = crate::ui::emoji_grid::create_emoji_grid(&search_entry);
-        println!("Window: Emoji Grid creation took {:.2?}", start_win.elapsed());
         // emoji_page is now a gtk::Box, which implements IsA<Widget>, so this is fine.
         stack.add_titled(&emoji_page, Some("emoji"), "Emoji");
 
@@ -67,6 +65,22 @@ impl CarmentaWindow {
             
         // Pin window to stay on top
         crate::dbus::DBusClient::pin_window(true);
+
+        let window_clone = window.clone();
+        window.connect_is_active_notify(move |win| {
+            if !win.is_active() {
+                // Focus lost!
+                let is_inserting = crate::app::IS_INSERTING.with(|f| *f.borrow());
+                if !is_inserting {
+                    println!("Focus lost and not inserting -> Closing App");
+                    if let Some(app) = win.application() {
+                        app.quit();
+                    }
+                } else {
+                    println!("Focus lost but inserting -> Keeping Open");
+                }
+            }
+        });
 
         Self { window }
     }
