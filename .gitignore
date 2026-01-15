@@ -1,0 +1,4 @@
+/target
+**/*.rs.bk
+Cargo.lock
+extension/schemas/gschemas.compiled

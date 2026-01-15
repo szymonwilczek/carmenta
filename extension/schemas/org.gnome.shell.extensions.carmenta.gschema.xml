@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist gettext-domain="carmenta">
+  <schema id="org.gnome.shell.extensions.carmenta" path="/org/gnome/shell/extensions/carmenta/">
+    <key name="carmenta-shortcut" type="as">
+      <default><![CDATA[['<Super>period']]]></default>
+      <summary>The shortcut to toggle Carmenta</summary>
+    </key>
+  </schema>
+</schemalist>
