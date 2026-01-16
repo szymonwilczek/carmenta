@@ -19,10 +19,19 @@ impl DBusClient {
                     Ok(_) => {},
                     Err(e) => {
                         eprintln!("DBus error: {}", e);
-                        // Fallback requires Main Thread access. 
+                        // fallback: copy to clipboard and quit app (no extension mode)
                         let text_clone = text_owned.clone();
-                        gtk4::glib::MainContext::default().spawn_local(async move {
+                        gtk4::glib::MainContext::default().invoke(move || {
                             Self::copy_to_clipboard(&text_clone);
+                            // quit the app after copying (non-extension behavior)
+                            gtk4::glib::timeout_add_local_once(
+                                std::time::Duration::from_millis(100),
+                                || {
+                                    if let Some(app) = gtk4::gio::Application::default() {
+                                        app.quit();
+                                    }
+                                }
+                            );
                         });
                     }
                  }
