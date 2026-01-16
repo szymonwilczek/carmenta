@@ -44,7 +44,7 @@ impl CarmentaWindow {
 
         // Search Bar
         let search_entry = SearchEntry::builder()
-            .placeholder_text("Search Emojis...")
+            .placeholder_text("Search...")
             .hexpand(true) // available width
             .build();
             
