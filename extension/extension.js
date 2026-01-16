@@ -239,9 +239,39 @@ export default class CarmentaExtension extends Extension {
 
   _spawnApp() {
     try {
-      console.log("Carmenta: Shortcut pressed via Extension (Log only)");
+      console.log("Carmenta: Launching app via keybinding");
+      const launcher = new Gio.SubprocessLauncher({
+        flags: Gio.SubprocessFlags.NONE,
+      });
+
+      // try launching from PATH first
+      try {
+        launcher.spawnv(["carmenta"]);
+        console.log("Carmenta: App launched successfully");
+      } catch (pathError) {
+        // try common installation locations
+        const locations = [
+          GLib.get_home_dir() + "/.cargo/bin/carmenta",
+          "/usr/local/bin/carmenta",
+          "/usr/bin/carmenta",
+        ];
+
+        let launched = false;
+        for (const path of locations) {
+          if (GLib.file_test(path, GLib.FileTest.EXISTS)) {
+            launcher.spawnv([path]);
+            console.log(`Carmenta: App launched from ${path}`);
+            launched = true;
+            break;
+          }
+        }
+
+        if (!launched) {
+          console.error("Carmenta: Could not find carmenta binary");
+        }
+      }
     } catch (e) {
-      console.error(e);
+      console.error(`Carmenta: Failed to launch app: ${e}`);
     }
   }
 }
