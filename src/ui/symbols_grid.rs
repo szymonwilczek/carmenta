@@ -116,13 +116,8 @@ pub fn create_symbols_grid(search_entry: &gtk4::SearchEntry) -> Box {
              let text = btn.label().unwrap_or_default().to_string();
              
              // History + Insertion Logic
-             crate::app::IS_INSERTING.with(|flag| *flag.borrow_mut() = true);
-             crate::history::add_recent(text.clone()); // Add to history!
-             
-             glib::timeout_add_local(std::time::Duration::from_millis(500), || {
-                 crate::app::IS_INSERTING.with(|flag| *flag.borrow_mut() = false);
-                 glib::ControlFlow::Break
-             });
+             crate::app::mark_inserting();
+             crate::history::add_recent(text.clone());
              
              DBusClient::insert_or_copy(&text);
          });

@@ -11,13 +11,8 @@ use std::rc::Rc;
 
 // helper function: Insert text & manage history/focus
 fn insert_helper(text: String) {
-     crate::app::IS_INSERTING.with(|flag| *flag.borrow_mut() = true);
+     crate::app::mark_inserting();
      crate::history::add_recent(text.clone());
-     
-     glib::timeout_add_local(std::time::Duration::from_millis(500), || {
-         crate::app::IS_INSERTING.with(|flag| *flag.borrow_mut() = false);
-         glib::ControlFlow::Break
-     });
      
      DBusClient::insert_or_copy(&text);
 }

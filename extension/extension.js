@@ -166,14 +166,14 @@ export default class CarmentaExtension extends Extension {
       this._lastFocusedWindow.activate(global.get_current_time());
 
       // 2. Copy and Paste
-      // We use a small timeout to allow focus switch to target
-      GLib.timeout_add(GLib.PRIORITY_DEFAULT, 10, () => {
+      // small timeout to allow focus switch to target
+      GLib.timeout_add(GLib.PRIORITY_DEFAULT, 1, () => {
         this._copyToClipboard(text);
         this._sendCtrlV();
 
         // 3. Return Focus to Carmenta (Boomerang)
-        // We wait slightly longer to ensure Ctrl+V was registered by the target
-        GLib.timeout_add(GLib.PRIORITY_DEFAULT, 50, () => {
+        // wait slightly longer to ensure Ctrl+V was registered by the target
+        GLib.timeout_add(GLib.PRIORITY_DEFAULT, 10, () => {
           let carmentaWin = this._findCarmentaWindow();
           if (carmentaWin) {
             carmentaWin.activate(global.get_current_time());
@@ -196,7 +196,6 @@ export default class CarmentaExtension extends Extension {
     let windows = global.display.get_tab_list(Meta.TabList.NORMAL, null);
     return windows.find((w) => {
       let wmClass = w.get_wm_class();
-      // Check for 'org.carmenta.App' or simple 'carmenta'
       return wmClass && wmClass.toLowerCase().includes("carmenta");
     });
   }
@@ -209,7 +208,7 @@ export default class CarmentaExtension extends Extension {
   _sendCtrlV() {
     if (!this._virtualDevice) return;
 
-    const time = Clutter.get_current_event_time(); // Or global.get_current_time()
+    const time = Clutter.get_current_event_time();
 
     // Ctrl down
     this._virtualDevice.notify_keyval(
