@@ -42,10 +42,27 @@ pub fn create_symbols_grid(search_entry: &gtk4::SearchEntry) -> Box {
     let filter_model = FilterListModel::new(Some(store), Some(filter.clone()));
     let selection_model = SingleSelection::new(Some(filter_model));
 
-    // Connect Search
-    search_entry.connect_search_changed(glib::clone!(@weak filter, @strong current_query => move |entry| {
-        *current_query.borrow_mut() = entry.text().to_string().to_lowercase();
-        filter.changed(gtk4::FilterChange::Different);
+    // Search with debounce (150ms)
+    let debounce_source: Rc<RefCell<Option<glib::SourceId>>> = Rc::new(RefCell::new(None));
+    search_entry.connect_search_changed(glib::clone!(@weak filter, @strong current_query, @strong debounce_source => move |entry| {
+        if let Some(source_id) = debounce_source.borrow_mut().take() {
+            source_id.remove();
+        }
+        
+        let query = entry.text().to_string().to_lowercase();
+        let current_query_clone = current_query.clone();
+        let filter_weak = filter.downgrade();
+        
+        let source_id = glib::timeout_add_local_once(
+            std::time::Duration::from_millis(150),
+            move || {
+                *current_query_clone.borrow_mut() = query;
+                if let Some(f) = filter_weak.upgrade() {
+                    f.changed(gtk4::FilterChange::Different);
+                }
+            }
+        );
+        *debounce_source.borrow_mut() = Some(source_id);
     }));
 
     // Buttons
