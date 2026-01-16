@@ -132,6 +132,20 @@ impl CarmentaWindow {
             }
         });
 
+        // Escape Key handler
+        let key_controller = gtk4::EventControllerKey::new();
+        let app_weak_key = app.downgrade();
+        key_controller.connect_key_pressed(move |_, key, _, _| {
+            if key == gtk4::gdk::Key::Escape {
+                if let Some(a) = app_weak_key.upgrade() {
+                    a.quit();
+                }
+                return glib::Propagation::Stop;
+            }
+            glib::Propagation::Proceed
+        });
+        window.add_controller(key_controller);
+
         Self { window }
     }
 
