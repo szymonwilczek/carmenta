@@ -24,9 +24,7 @@ flatpak remote-add --if-not-exists --user flathub https://dl.flathub.org/repo/fl
 flatpak install -y flathub org.flatpak.Builder
 
 echo "🏗️ Building ${APP_ID} using Flatpak Builder..."
-
-# --force-clean to ensure fresh build
-flatpak run --command=flathub-build org.flatpak.Builder --install --user build-dir "$MANIFEST" --force-clean
+flatpak run --command=flathub-build org.flatpak.Builder --install --user --force-clean "$MANIFEST"
 
 echo "✅ Build Complete."
 echo ""

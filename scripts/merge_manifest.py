@@ -6,8 +6,11 @@ print("🔄 Merging cargo-sources.json into io.github.szymonwilczek.carmenta.jso
 manifest = {
     "app-id": "io.github.szymonwilczek.carmenta",
     "runtime": "org.gnome.Platform",
-    "runtime-version": "47",
+    "runtime-version": "49",
     "sdk": "org.gnome.Sdk",
+    "sdk-extensions": [
+        "org.freedesktop.Sdk.Extension.rust-stable"
+    ],
     "command": "carmenta",
     "finish-args": [
         "--share=ipc",
@@ -17,6 +20,7 @@ manifest = {
         "--talk-name=org.gnome.Shell"
     ],
     "build-options": {
+        "append-path": "/usr/lib/sdk/rust-stable/bin",
         "env": {
              "CARGO_HOME": "/run/build/carmenta/cargo"
         }
