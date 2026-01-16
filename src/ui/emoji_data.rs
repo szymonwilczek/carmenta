@@ -86,3 +86,40 @@ impl EmojiObject {
         self.imp().keywords_lower.borrow().clone()
     }
 }
+
+pub use imp::EmojiCategory;
+
+pub fn get_all_emojis() -> Vec<EmojiObject> {
+    use emojis::Group;
+    let mut grid_items = Vec::new(); 
+    
+    for emoji in emojis::iter() {
+        let group = emoji.group();
+        let category = match group {
+            Group::SmileysAndEmotion => EmojiCategory::SmileysAndPeople,
+            Group::PeopleAndBody => EmojiCategory::SmileysAndPeople,
+            Group::AnimalsAndNature => EmojiCategory::AnimalsAndNature,
+            Group::FoodAndDrink => EmojiCategory::FoodAndDrink,
+            Group::Activities => EmojiCategory::Activities,
+            Group::TravelAndPlaces => EmojiCategory::TravelAndPlaces,
+            Group::Objects => EmojiCategory::Objects,
+            Group::Symbols => EmojiCategory::Symbols,
+            Group::Flags => EmojiCategory::Flags,
+            _ => EmojiCategory::Symbols, 
+        };
+
+        let name = emoji.name().to_string();
+        let mut keywords = vec![name.clone()];
+        if let Some(short) = emoji.shortcode() {
+            keywords.push(short.to_string());
+        }
+
+        grid_items.push(EmojiObject::new(
+            emoji.as_str().to_string(),
+            name,
+            category,
+            keywords
+        ));
+    }
+    grid_items
+}

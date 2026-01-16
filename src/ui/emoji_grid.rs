@@ -2,14 +2,26 @@ use gtk4::prelude::*;
 use gtk4::{
     gio, glib, GridView, SignalListItemFactory, SingleSelection, 
     PolicyType, ScrolledWindow, Box, Orientation, ToggleButton, 
-    CustomFilter, FilterListModel, Label
+    CustomFilter, FilterListModel, Label, Popover
 };
 use gtk4::subclass::prelude::ObjectSubclassIsExt;
-use super::emoji_data::EmojiObject; 
-use crate::ui::emoji_data::imp::EmojiCategory;
+use super::emoji_data::{EmojiCategory, EmojiObject, get_all_emojis};
 use crate::dbus::DBusClient;
 use std::cell::RefCell;
 use std::rc::Rc;
+
+// helper function: Insert text & manage history/focus
+fn insert_helper(text: String) {
+     crate::app::IS_INSERTING.with(|flag| *flag.borrow_mut() = true);
+     crate::history::add_recent(text.clone());
+     
+     glib::timeout_add_local(std::time::Duration::from_millis(500), || {
+         crate::app::IS_INSERTING.with(|flag| *flag.borrow_mut() = false);
+         glib::ControlFlow::Break
+     });
+     
+     DBusClient::insert_or_copy(&text);
+}
 
 pub fn create_emoji_grid(search_entry: &gtk4::SearchEntry) -> Box {
     // Top container: Categories + Grid
@@ -24,60 +36,26 @@ pub fn create_emoji_grid(search_entry: &gtk4::SearchEntry) -> Box {
     sidebar.set_margin_bottom(6);
     
     // 2. Data Store & Filter
-    // 2. Data Store & Filter
     let store = gio::ListStore::new::<EmojiObject>();
     
     // Populate store 
-    let mut all_emojis = Vec::with_capacity(4000); // Pre-allocate
+    let all_emojis = get_all_emojis();
     
-    for e in emojis::iter() {
-        let cat = match e.group() {
-            emojis::Group::SmileysAndEmotion => EmojiCategory::SmileysAndPeople,
-            emojis::Group::PeopleAndBody => EmojiCategory::SmileysAndPeople,
-            emojis::Group::AnimalsAndNature => EmojiCategory::AnimalsAndNature,
-            emojis::Group::FoodAndDrink => EmojiCategory::FoodAndDrink,
-            emojis::Group::Activities => EmojiCategory::Activities,
-            emojis::Group::TravelAndPlaces => EmojiCategory::TravelAndPlaces,
-            emojis::Group::Objects => EmojiCategory::Objects,
-            emojis::Group::Symbols => EmojiCategory::Symbols,
-            emojis::Group::Flags => EmojiCategory::Flags,
-            _ => EmojiCategory::Symbols, 
-        };
-
-        // Inject keywords (just English name + shortcode for now)
-        let mut keys = vec![e.name().to_string()];
-        if let Some(short) = e.shortcode() {
-            keys.push(short.to_string());
-        }
-
-        all_emojis.push(EmojiObject::new(
-            e.as_str().to_string(), 
-            e.name().to_string(),
-            cat,
-            keys
-        ));
-    }
-
-    // 2.1 Load Recent Emojis
-    // We duplicate the EmojiObjects for the Recent category so they can exist independently
-    // and be sorted by recency.
-    let recent_chars = crate::history::get_recent();
-    for char_str in recent_chars {
-        // Find the original data to copy metadata keywords/name
-        // Optimization: Create a lookup map if this is slow, but for 50 items linear scan of 4000 is okay-ish (50 * 4000 = 200k ops, < 1ms)
-        // Actually, we can just find it in all_emojis.
-        if let Some(original) = all_emojis.iter().find(|e| e.emoji() == char_str) {
-             let imp = original.imp();
-             let name = imp.name.borrow().clone();
-             let keywords = imp.keywords.borrow().clone();
-             
-             let recent_obj = EmojiObject::new(
-                 char_str.clone(),
-                 name,
+    // Add "Recent" category from history first
+    let recent = crate::history::get_recent();
+    for r in recent {
+        if let Some(e) = emojis::get(&r) {
+             let name = e.name().to_string();
+             let mut keywords = vec![name.clone()];
+             if let Some(short) = e.shortcode() {
+                 keywords.push(short.to_string());
+             }
+             store.append(&EmojiObject::new(
+                 r.clone(), 
+                 name, 
                  EmojiCategory::Recent,
                  keywords
-             );
-             all_emojis.push(recent_obj);
+             ));
         }
     }
 
@@ -86,24 +64,24 @@ pub fn create_emoji_grid(search_entry: &gtk4::SearchEntry) -> Box {
     // Filter Logic
     let current_category = Rc::new(RefCell::new(EmojiCategory::SmileysAndPeople));
     let current_query = Rc::new(RefCell::new(String::new()));
-    
+
     let filter = CustomFilter::new(glib::clone!(@strong current_category, @strong current_query => move |obj| {
         let emoji_obj = obj.downcast_ref::<EmojiObject>().unwrap();
-        let query = current_query.borrow(); // Already lowercased by the signal handler
+        let query = current_query.borrow();
         
-        // If query is present, ignore category and search ALL emojis
+        // 1. Search filter
         if !query.is_empty() {
-             // Access cached lowercased name directly for zero-allocation check
-             let imp = emoji_obj.imp();
-             if imp.name_lower.borrow().contains(query.as_str()) { return true; }
-             
-             for k in imp.keywords_lower.borrow().iter() {
-                 if k.contains(query.as_str()) { return true; }
+            // Check keywords (basic check)
+             let keywords = emoji_obj.keywords_lower();
+             for k in keywords {
+                 if k.contains(query.as_str()) {
+                     return true;
+                 }
              }
              return false;
         }
 
-        // If no query, check Category
+        // 2. Category filter
         emoji_obj.category() == *current_category.borrow()
     }));
 
@@ -111,49 +89,53 @@ pub fn create_emoji_grid(search_entry: &gtk4::SearchEntry) -> Box {
     let selection_model = SingleSelection::new(Some(filter_model));
 
     // Connect Search Entry
-    search_entry.connect_search_changed(glib::clone!(@weak filter, @strong current_query => move |entry: &gtk4::SearchEntry| {
+    search_entry.connect_search_changed(glib::clone!(@weak filter, @strong current_query => move |entry| {
         *current_query.borrow_mut() = entry.text().to_string().to_lowercase();
         filter.changed(gtk4::FilterChange::Different);
     }));
 
-    // 3. Category Buttons
-    let categories = vec![
-        ("🕙", EmojiCategory::Recent, "Recent"),
-        ("🙂", EmojiCategory::SmileysAndPeople, "Smileys & People"),
-        ("🐯", EmojiCategory::AnimalsAndNature, "Animals & Nature"),
-        ("🍔", EmojiCategory::FoodAndDrink, "Food & Drink"),
-        ("⚽", EmojiCategory::Activities, "Activities"),
-        ("✈️", EmojiCategory::TravelAndPlaces, "Travel & Places"),
-        ("💡", EmojiCategory::Objects, "Objects"),
-        ("⁉️", EmojiCategory::Symbols, "Symbols"),
-        ("🇺🇳", EmojiCategory::Flags, "Flags"),
+    // 3. Category Buttons (Sidebar)
+    let categories = [
+        ("🕙", EmojiCategory::Recent),
+        ("🙂", EmojiCategory::SmileysAndPeople),
+        ("🐻", EmojiCategory::AnimalsAndNature),
+        ("🍔", EmojiCategory::FoodAndDrink),
+        ("⚽", EmojiCategory::Activities),
+        ("✈️", EmojiCategory::TravelAndPlaces),
+        ("💡", EmojiCategory::Objects),
+        ("🔣", EmojiCategory::Symbols),
+        ("🚩", EmojiCategory::Flags),
     ];
 
-    let mut first_btn: Option<ToggleButton> = None;
+    let group = gtk4::CheckButton::builder().build(); 
+    let mut first_btn = None;
 
-    for (icon, cat, tooltip) in categories {
+    for (icon, cat_val) in categories {
         let btn = ToggleButton::builder()
             .label(icon)
-            .tooltip_text(tooltip)
             .css_classes(["category-btn", "flat"])
             .build();
         
-        if let Some(ref first) = first_btn {
-            btn.set_group(Some(first));
-        } else {
-            first_btn = Some(btn.clone());
-            btn.set_active(true); // Default active
+        if first_btn.is_none() {
+            if cat_val == EmojiCategory::SmileysAndPeople {
+                 btn.set_active(true);
+                 first_btn = Some(btn.clone());
+            }
         }
+        
+        if let Some(ref first) = first_btn {
+            if cat_val != EmojiCategory::SmileysAndPeople {
+                btn.set_group(Some(first));
+            }
+        } 
 
-        // Logic
-        let cat_val = cat;
         btn.connect_toggled(glib::clone!(@strong current_category, @weak filter => move |b| {
             if b.is_active() {
                 *current_category.borrow_mut() = cat_val;
                 filter.changed(gtk4::FilterChange::Different);
             }
         }));
-
+        
         sidebar.append(&btn);
     }
     
@@ -162,26 +144,59 @@ pub fn create_emoji_grid(search_entry: &gtk4::SearchEntry) -> Box {
     // 4. Factory & Grid
     let factory = SignalListItemFactory::new();
     factory.connect_setup(move |_factory, item| {
-         let item = item.downcast_ref::<gtk4::ListItem>().unwrap();
          let button = gtk4::Button::builder().css_classes(["emoji-btn", "flat"]).build();
          item.set_child(Some(&button));
+         
+         // Left Click (Primary)
          button.connect_clicked(move |btn| {
              let text = btn.label().unwrap_or_default().to_string();
-             // Mark insertion in progress so window doesn't close on focus loss
-             crate::app::IS_INSERTING.with(|flag| *flag.borrow_mut() = true);
-             
-             // Save to History
-             let text_clone = text.clone();
-             crate::history::add_recent(text_clone);
-
-             // Safety net: Reset flag after 1 second just in case focus never returns
-             glib::timeout_add_local(std::time::Duration::from_millis(500), || {
-                 crate::app::IS_INSERTING.with(|flag| *flag.borrow_mut() = false);
-                 glib::ControlFlow::Break
-             });
-             
-             DBusClient::insert_or_copy(&text);
+             insert_helper(text);
          });
+
+         // Right Click (Secondary) - Skin Tones
+         let gesture = gtk4::GestureClick::new();
+         gesture.set_button(3); // Right click
+         
+         let button_weak = button.downgrade();
+         gesture.connect_pressed(move |_gesture, _, _, _| {
+             let btn = match button_weak.upgrade() {
+                 Some(b) => b,
+                 None => return,
+             };
+             let base_emoji = btn.label().unwrap_or_default().to_string();
+             
+             if let Some(emoji_data) = emojis::get(&base_emoji) {
+                 if let Some(variants) = emoji_data.skin_tones() {
+                     // Create Popover
+                     let popover = Popover::builder().child(&Box::new(Orientation::Horizontal, 5)).build();
+                     let container = popover.child().unwrap().downcast::<Box>().unwrap();
+                     container.set_margin_top(5);
+                     container.set_margin_bottom(5);
+                     container.set_margin_start(5);
+                     container.set_margin_end(5);
+
+                     // Add variants
+                     for variant in variants {
+                         let v_btn = gtk4::Button::builder()
+                            .label(variant.as_str())
+                            .css_classes(["emoji-btn-small", "flat"])
+                            .build();
+                         
+                         let v_text = variant.as_str().to_string();
+                         let pop_clone = popover.clone();
+                         v_btn.connect_clicked(move |_| {
+                             insert_helper(v_text.clone());
+                             pop_clone.popdown();
+                         });
+                         container.append(&v_btn);
+                     }
+                     
+                     popover.set_parent(&btn);
+                     popover.popup();
+                 }
+             }
+         });
+         button.add_controller(gesture);
     });
 
     factory.connect_bind(move |_factory, item| {
@@ -195,19 +210,18 @@ pub fn create_emoji_grid(search_entry: &gtk4::SearchEntry) -> Box {
     let grid_view = GridView::builder()
         .model(&selection_model)
         .factory(&factory)
-        .max_columns(10)
+        .max_columns(8)
         .min_columns(5)
-        .enable_rubberband(false)
         .build();
 
-    let scrolled = ScrolledWindow::builder()
-        .child(&grid_view)
+    let scrolled_window = ScrolledWindow::builder()
         .hscrollbar_policy(PolicyType::Never)
+        .vscrollbar_policy(PolicyType::Automatic)
+        .child(&grid_view)
         .hexpand(true)
         .vexpand(true)
         .build();
 
-    container.append(&scrolled);
-
+    container.append(&scrolled_window);
     container
 }
