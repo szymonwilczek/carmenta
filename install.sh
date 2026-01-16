@@ -17,8 +17,8 @@ cp target/release/carmenta ~/.local/bin/
 chmod +x ~/.local/bin/carmenta
 
 echo "🖥️ Installing Desktop File & Icon..."
-cp data/org.carmenta.App.desktop ~/.local/share/applications/
-cp data/org.carmenta.App.svg ~/.local/share/icons/hicolor/scalable/apps/
+cp data/io.github.szymonwilczek.carmenta.desktop ~/.local/share/applications/
+cp data/io.github.szymonwilczek.carmenta.svg ~/.local/share/icons/hicolor/scalable/apps/
 
 echo ""
 echo "🧩 GNOME Shell Extension"

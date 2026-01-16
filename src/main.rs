@@ -16,7 +16,7 @@ fn main() -> anyhow::Result<()> {
     let rt = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
     RUNTIME.set(rt).expect("Failed to set global runtime");
 
-    let app = CarmentaApp::new(APP_ID);
+    let app = CarmentaApp::new("io.github.szymonwilczek.carmenta");
     app.run();
     
     Ok(())

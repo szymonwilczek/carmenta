@@ -27,7 +27,7 @@ export default class CarmentaExtension extends Extension {
     super(uuid);
     this._uuid = uuid;
     this._dbus = null;
-    this._appId = "org.carmenta.App";
+    this._appId = "io.github.szymonwilczek.carmenta";
     this._lastFocusedWindow = null;
     this._windowFocusId = null;
     this._dbusImpl = null;

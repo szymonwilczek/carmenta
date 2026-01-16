@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.szymonwilczek.carmenta</id>
+  <name>Carmenta</name>
+  <summary>Blazing fast Emoji Picker</summary>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>MIT</project_license>
+  <developer_name>Szymon Wilczek</developer_name>
+  <description>
+    <p>
+      Carmenta is a lightweight emoji picker designed for GNOME. 
+      It provides instant access to thousands of Emojis, Kaomojis (Japanese emoticons), and Math symbols.
+    </p>
+    <ul>
+      <li>🚀 Instant search with debounce optimization</li>
+      <li>✨ Modern GTK4 + Libadwaita interface</li>
+      <li>📌 "Always on Top" mode for easy insertion</li>
+      <li>⌨️ Global shortcut support (with extension)</li>
+    </ul>
+    <p>
+        Note: The companion GNOME Shell extension is recommended for the best experience (focus switching).
+    </p>
+  </description>
+  <launchable type="desktop-id">io.github.szymonwilczek.carmenta.desktop</launchable>
+  <url type="homepage">https://github.com/szymonwilczek/carmenta</url>
+  <url type="bugtracker">https://github.com/szymonwilczek/carmenta/issues</url>
+  <screenshots>
+      <screenshot type="default">
+        <caption>Main Window</caption>
+        <image>https://raw.githubusercontent.com/szymonwilczek/carmenta/main/data/screenshots/main.png</image>
+      </screenshot>
+  </screenshots>
+  <releases>
+      <release version="1.0.0" date="2026-01-16" />
+  </releases>
+  <content_rating type="oars-1.1" />
+</component>

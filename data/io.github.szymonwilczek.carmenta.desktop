@@ -2,7 +2,7 @@
 Name=Carmenta
 Comment=Blazing fast Emoji Picker
 Exec=carmenta
-Icon=org.carmenta.App
+Icon=io.github.szymonwilczek.carmenta
 Type=Application
 Categories=Utility;GTK;
 Terminal=false
