@@ -2,9 +2,8 @@ use gtk4::prelude::*;
 use gtk4::{
     gio, glib, GridView, SignalListItemFactory, SingleSelection, 
     PolicyType, ScrolledWindow, Box, Orientation, ToggleButton, 
-    CustomFilter, FilterListModel, Label, Popover
+    CustomFilter, FilterListModel, Popover
 };
-use gtk4::subclass::prelude::ObjectSubclassIsExt;
 use super::emoji_data::{EmojiCategory, EmojiObject, get_all_emojis};
 use crate::dbus::DBusClient;
 use std::cell::RefCell;
@@ -133,7 +132,6 @@ pub fn create_emoji_grid(search_entry: &gtk4::SearchEntry) -> Box {
         ("🚩", EmojiCategory::Flags),
     ];
 
-    let group = gtk4::CheckButton::builder().build(); 
     let mut first_btn = None;
 
     for (icon, cat_val) in categories {

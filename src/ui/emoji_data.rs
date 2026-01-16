@@ -1,5 +1,4 @@
 use gtk4::glib;
-use gtk4::prelude::*;
 use gtk4::subclass::prelude::*;
 
 pub mod imp {

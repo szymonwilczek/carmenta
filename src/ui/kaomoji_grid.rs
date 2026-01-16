@@ -2,7 +2,7 @@ use gtk4::prelude::*;
 use gtk4::{
     gio, glib, GridView, SignalListItemFactory, SingleSelection, 
     PolicyType, ScrolledWindow, Box, Orientation, ToggleButton, 
-    CustomFilter, FilterListModel, Label
+    CustomFilter, FilterListModel
 };
 use std::cell::RefCell;
 use std::rc::Rc;

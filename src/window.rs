@@ -1,5 +1,4 @@
 use gtk4::prelude::*;
-use libadwaita::prelude::*;
 use libadwaita::{Application, ApplicationWindow};
 use gtk4::{Box, Orientation, SearchEntry, gio};
 use gtk4::glib;
@@ -10,14 +9,6 @@ pub struct CarmentaWindow {
 
 impl CarmentaWindow {
     pub fn new(app: &Application) -> Self {
-        let window = ApplicationWindow::builder()
-            .application(app)
-            .title("Carmenta")
-            .default_width(420)
-            .default_height(480)
-            .modal(false)
-            .decorated(true)
-            .build();
 
         // Menu
         let menu = gio::Menu::new();
@@ -113,7 +104,6 @@ impl CarmentaWindow {
         // Pin window to stay on top
         crate::dbus::DBusClient::pin_window(true);
 
-        let window_clone = window.clone();
         window.connect_is_active_notify(move |win| {
             if !win.is_active() {
                 let win_weak = win.downgrade();
