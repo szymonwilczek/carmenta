@@ -111,7 +111,6 @@ pub fn create_symbols_grid(search_entry: &gtk4::SearchEntry) -> Box {
         let button = item.child().unwrap().downcast::<gtk4::Button>().unwrap();
         let entry = item.item().unwrap().downcast::<SymbolObject>().unwrap();
         button.set_label(&entry.char());
-        button.set_tooltip_text(Some(&entry.name()));
     });
 
     let grid_view = GridView::builder()
