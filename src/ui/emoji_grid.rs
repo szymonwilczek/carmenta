@@ -38,28 +38,54 @@ pub fn create_emoji_grid(search_entry: &gtk4::SearchEntry) -> Box {
     // 2. Data Store & Filter
     let store = gio::ListStore::new::<EmojiObject>();
     
-    // Populate store 
+    // Populate store with all emojis first
     let all_emojis = get_all_emojis();
+    store.extend_from_slice(&all_emojis);
     
-    // Add "Recent" category from history first
-    let recent = crate::history::get_recent();
-    for r in recent {
-        if let Some(e) = emojis::get(&r) {
-             let name = e.name().to_string();
-             let mut keywords = vec![name.clone()];
-             if let Some(short) = e.shortcode() {
-                 keywords.push(short.to_string());
-             }
-             store.append(&EmojiObject::new(
-                 r.clone(), 
-                 name, 
-                 EmojiCategory::Recent,
-                 keywords
-             ));
+    // helper function to rebuild Recent items in store
+    fn rebuild_recent(store: &gio::ListStore) {
+        // Remove existing Recent items (at the beginning)
+        while store.n_items() > 0 {
+            if let Some(obj) = store.item(0) {
+                if let Some(emoji_obj) = obj.downcast_ref::<EmojiObject>() {
+                    if emoji_obj.category() == EmojiCategory::Recent {
+                        store.remove(0);
+                        continue;
+                    }
+                }
+            }
+            break;
+        }
+        
+        // Add current Recent items at the beginning
+        let recent = crate::history::get_recent();
+        for (i, r) in recent.iter().enumerate() {
+            if let Some(e) = emojis::get(r) {
+                let name = e.name().to_string();
+                let mut keywords = vec![name.clone()];
+                if let Some(short) = e.shortcode() {
+                    keywords.push(short.to_string());
+                }
+                store.insert(i as u32, &EmojiObject::new(
+                    r.clone(), 
+                    name, 
+                    EmojiCategory::Recent,
+                    keywords
+                ));
+            }
         }
     }
-
-    store.extend_from_slice(&all_emojis);
+    
+    // Initial population of Recent
+    rebuild_recent(&store);
+    
+    // Register callback to refresh Recent when history changes
+    let store_weak = store.downgrade();
+    crate::history::on_history_changed(move || {
+        if let Some(store) = store_weak.upgrade() {
+            rebuild_recent(&store);
+        }
+    });
 
     // Filter Logic
     let current_category = Rc::new(RefCell::new(EmojiCategory::SmileysAndPeople));

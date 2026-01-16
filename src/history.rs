@@ -27,7 +27,7 @@ impl History {
 
     pub fn load() -> Self {
         let path = Self::get_path();
-        if let Ok(content) = fs::read_to_string(path) {
+        if let Ok(content) = fs::read_to_string(&path) {
             if let Ok(history) = serde_json::from_str(&content) {
                 return history;
             }
@@ -38,12 +38,14 @@ impl History {
     pub fn save(&self) {
         let path = Self::get_path();
         if let Ok(json) = serde_json::to_string(self) {
-            let _ = fs::write(path, json);
+            if let Err(e) = fs::write(&path, json) {
+                eprintln!("Failed to save history: {}", e);
+            }
         }
     }
 
     pub fn add(&mut self, emoji: String) {
-        // Remove existing to maximize bubbling to top
+        // Remove existing to bubble to top
         if let Some(pos) = self.recent.iter().position(|x| *x == emoji) {
             self.recent.remove(pos);
         }
@@ -57,20 +59,39 @@ impl History {
     }
 }
 
-// Global thread-safe instance (or thread-local if only used in GUI thread)
-// Since we are single-threaded GTK app roughly, thread_local is fine.
+// Global history instance
 thread_local! {
     pub static GLOBAL_HISTORY: RefCell<History> = RefCell::new(History::load());
+    // Callbacks to notify UI when history changes
+    static HISTORY_CALLBACKS: RefCell<Vec<Box<dyn Fn()>>> = RefCell::new(Vec::new());
 }
 
 pub fn add_recent(emoji: String) {
     GLOBAL_HISTORY.with(|h| {
         h.borrow_mut().add(emoji);
     });
+    // Notify all registered callbacks
+    notify_history_changed();
 }
 
 pub fn get_recent() -> Vec<String> {
     GLOBAL_HISTORY.with(|h| {
         h.borrow().recent.clone()
     })
+}
+
+/// Register a callback to be called when history changes
+pub fn on_history_changed<F: Fn() + 'static>(callback: F) {
+    HISTORY_CALLBACKS.with(|callbacks| {
+        callbacks.borrow_mut().push(Box::new(callback));
+    });
+}
+
+/// Notify all registered callbacks that history has changed
+fn notify_history_changed() {
+    HISTORY_CALLBACKS.with(|callbacks| {
+        for callback in callbacks.borrow().iter() {
+            callback();
+        }
+    });
 }
