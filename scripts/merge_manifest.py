@@ -1,7 +1,13 @@
 import json
 import os
+import subprocess
 
-print("🔄 Merging cargo-sources.json into io.github.szymonwilczek.carmenta.json...")
+try:
+    commit_hash = subprocess.check_output(["git", "rev-parse", "HEAD"]).decode("utf-8").strip()
+    print(f"📌 Using commit: {commit_hash}")
+except Exception as e:
+    print("❌ Failed to get git commit hash. Are you in a git repo?")
+    exit(1)
 
 manifest = {
     "app-id": "io.github.szymonwilczek.carmenta",
@@ -37,7 +43,11 @@ manifest = {
                 "install -D data/io.github.szymonwilczek.carmenta.metainfo.xml /app/share/metainfo/io.github.szymonwilczek.carmenta.metainfo.xml"
             ],
             "sources": [
-                { "type": "dir", "path": "." }
+                { 
+                    "type": "git", 
+                    "url": "https://github.com/szymonwilczek/carmenta.git",
+                    "commit": commit_hash
+                }
             ]
         }
     ]
