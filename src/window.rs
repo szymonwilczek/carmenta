@@ -67,15 +67,18 @@ impl CarmentaWindow {
         
         // -- Emoji Page --
         let emoji_page = crate::ui::emoji_grid::create_emoji_grid(&search_entry);
-        stack.add_titled(&emoji_page, Some("emoji"), "Emoji");
+        let page = stack.add_titled(&emoji_page, Some("emoji"), "Emoji");
+        page.set_icon_name(Some("face-smile-symbolic"));
 
         // -- Kaomoji Page --
         let kaomoji_page = crate::ui::kaomoji_grid::create_kaomoji_grid(&search_entry);
-        stack.add_titled(&kaomoji_page, Some("kaomoji"), "Kaomoji");
+        let page = stack.add_titled(&kaomoji_page, Some("kaomoji"), "Kaomoji");
+        page.set_icon_name(Some("face-wink-symbolic"));
 
         // -- Symbols Page --
         let symbols_page = crate::ui::symbols_grid::create_symbols_grid(&search_entry);
-        stack.add_titled(&symbols_page, Some("symbols"), "Symbols");
+        let page = stack.add_titled(&symbols_page, Some("symbols"), "Symbols");
+        page.set_icon_name(Some("preferences-desktop-font-symbolic"));
 
         // View Switcher (Bottom Bar)
         let view_switcher = libadwaita::ViewSwitcherBar::builder()
