@@ -58,14 +58,12 @@ impl KaomojiObject {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum KaomojiCategory {
     #[default]
-    SafeMode, // Default
     Joy,
     Love,
     Embarrassment,
     Anger,
     Sorrow,
-    Fear,
-    Actions, // Flip table etc
+    Actions,
 }
 
 pub fn get_all_kaomojis() -> Vec<KaomojiObject> {
