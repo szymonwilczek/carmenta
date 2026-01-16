@@ -85,7 +85,7 @@ pub fn create_emoji_grid(search_entry: &gtk4::SearchEntry) -> Box {
     let current_category = Rc::new(RefCell::new(EmojiCategory::SmileysAndPeople));
     let current_query = Rc::new(RefCell::new(String::new()));
 
-    let filter = CustomFilter::new(glib::clone!(@strong current_category, @strong current_query => move |obj| {
+    let filter = CustomFilter::new(glib::clone!(#[strong] current_category, #[strong] current_query, move |obj| {
         let emoji_obj = obj.downcast_ref::<EmojiObject>().unwrap();
         let query = current_query.borrow();
         
@@ -114,7 +114,7 @@ pub fn create_emoji_grid(search_entry: &gtk4::SearchEntry) -> Box {
 
     // Connect Search Entry with debounce (150ms)
     let debounce_source: Rc<RefCell<Option<glib::SourceId>>> = Rc::new(RefCell::new(None));
-    search_entry.connect_search_changed(glib::clone!(@weak filter, @strong current_query, @strong debounce_source => move |entry| {
+    search_entry.connect_search_changed(glib::clone!(#[weak] filter, #[strong] current_query, #[strong] debounce_source, move |entry| {
         // Cancel previous debounce timer if still pending
         if let Some(source_id) = debounce_source.borrow_mut().take() {
             // Use try pattern - source may have already fired and been auto-removed
@@ -174,7 +174,7 @@ pub fn create_emoji_grid(search_entry: &gtk4::SearchEntry) -> Box {
              btn.set_active(true);
         } 
 
-        btn.connect_toggled(glib::clone!(@strong current_category, @weak filter => move |b| {
+        btn.connect_toggled(glib::clone!(#[strong] current_category, #[weak] filter, move |b| {
             if b.is_active() {
                 *current_category.borrow_mut() = cat_val;
                 filter.changed(gtk4::FilterChange::Different);
