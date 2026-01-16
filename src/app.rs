@@ -28,6 +28,9 @@ impl CarmentaApp {
     }
 
     fn on_activate(app: &Application) {
+        // prefetching DBus connection to avoid flicker on first insert
+        crate::dbus::DBusClient::init_connection();
+        
         let window = CarmentaWindow::new(app);
         window.present();
     }

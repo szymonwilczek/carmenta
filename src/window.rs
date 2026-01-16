@@ -101,8 +101,13 @@ impl CarmentaWindow {
             .decorated(true) 
             .build();
             
-        // Pin window to stay on top
-        crate::dbus::DBusClient::pin_window(true);
+        // pin window to stay on top - but wait for window to be mapped!
+        let win_weak_pin = window.downgrade();
+        window.connect_map(move |_| {
+            if let Some(_) = win_weak_pin.upgrade() {
+                 crate::dbus::DBusClient::pin_window(true);
+            }
+        });
 
         window.connect_is_active_notify(move |win| {
             if !win.is_active() {

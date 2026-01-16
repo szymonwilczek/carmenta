@@ -13,6 +13,14 @@ static CONNECTION: OnceCell<Connection> = OnceCell::const_new();
 const DBUS_TIMEOUT: Duration = Duration::from_millis(500);
 
 impl DBusClient {
+    pub fn init_connection() {
+        if let Some(rt) = crate::RUNTIME.get() {
+            rt.spawn(async move {
+                let _ = Self::get_connection().await;
+            });
+        }
+    }
+
     pub fn insert_or_copy(text: &str) {
         let text_owned = text.to_string();
         if let Some(rt) = crate::RUNTIME.get() {
