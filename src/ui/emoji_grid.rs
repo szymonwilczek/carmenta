@@ -96,14 +96,18 @@ pub fn create_emoji_grid(search_entry: &gtk4::SearchEntry) -> Box {
         
         // 1. Search filter
         if !query.is_empty() {
-            // Check keywords (basic check)
-             let keywords = emoji_obj.keywords_lower();
-             for k in keywords {
-                 if k.contains(query.as_str()) {
-                     return true;
-                 }
-             }
-             return false;
+            // skip Recent category during search to avoid duplicates
+            if emoji_obj.category() == EmojiCategory::Recent {
+                return false;
+            }
+            
+            let keywords = emoji_obj.keywords_lower();
+            for k in keywords {
+                if k.contains(query.as_str()) {
+                    return true;
+                }
+            }
+            return false;
         }
 
         // 2. Category filter
