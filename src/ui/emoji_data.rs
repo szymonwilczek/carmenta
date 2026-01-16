@@ -105,7 +105,6 @@ pub fn get_all_emojis() -> Vec<EmojiObject> {
             Group::Objects => EmojiCategory::Objects,
             Group::Symbols => EmojiCategory::Symbols,
             Group::Flags => EmojiCategory::Flags,
-            _ => EmojiCategory::Symbols, 
         };
 
         let name = emoji.name().to_string();
