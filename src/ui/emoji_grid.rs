@@ -170,16 +170,13 @@ pub fn create_emoji_grid(search_entry: &gtk4::SearchEntry) -> Box {
             .build();
         
         if first_btn.is_none() {
-            if cat_val == EmojiCategory::SmileysAndPeople {
-                 btn.set_active(true);
-                 first_btn = Some(btn.clone());
-            }
+            first_btn = Some(btn.clone());
+        } else if let Some(ref first) = first_btn {
+            btn.set_group(Some(first));
         }
-        
-        if let Some(ref first) = first_btn {
-            if cat_val != EmojiCategory::SmileysAndPeople {
-                btn.set_group(Some(first));
-            }
+
+        if cat_val == EmojiCategory::SmileysAndPeople {
+             btn.set_active(true);
         } 
 
         btn.connect_toggled(glib::clone!(@strong current_category, @weak filter => move |b| {
