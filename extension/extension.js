@@ -251,6 +251,7 @@ export default class CarmentaExtension extends Extension {
         // try common installation locations
         const locations = [
           GLib.get_home_dir() + "/.cargo/bin/carmenta",
+          GLib.get_home_dir() + "/.local/bin/carmenta",
           "/usr/local/bin/carmenta",
           "/usr/bin/carmenta",
         ];
@@ -258,16 +259,38 @@ export default class CarmentaExtension extends Extension {
         let launched = false;
         for (const path of locations) {
           if (GLib.file_test(path, GLib.FileTest.EXISTS)) {
-            launcher.spawnv([path]);
-            console.log(`Carmenta: App launched from ${path}`);
-            launched = true;
-            break;
+            try {
+              launcher.spawnv([path]);
+              console.log(`Carmenta: App launched from ${path}`);
+              launched = true;
+              break;
+            } catch (e) {
+              log(`[Carmenta] Failed to launch ${path}: ${e}`);
+            }
           }
         }
 
-        if (!launched) {
-          console.error("Carmenta: Could not find carmenta binary");
+        if (launched) {
+          return; // exit if successful
         }
+
+        // fallback: flatpak
+        try {
+          let flatpakLauncher = new Gio.SubprocessLauncher({
+            flags:
+              Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_PIPE,
+          });
+          flatpakLauncher.spawnv(["flatpak", "run", "org.carmenta.App"]);
+          log("[Carmenta] Launched via Flatpak");
+          return; // exit if successful
+        } catch (e) {
+          log(`[Carmenta] Failed to launch flatpak: ${e}`);
+        }
+
+        Main.notify(
+          "Carmenta",
+          "Could not find 'carmenta' executable in PATH or Flatpak.",
+        );
       }
     } catch (e) {
       console.error(`Carmenta: Failed to launch app: ${e}`);

@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=Carmenta
+Comment=Blazing fast Emoji Picker
+Exec=carmenta
+Icon=org.carmenta.App
+Type=Application
+Categories=Utility;GTK;
+Terminal=false
+StartupNotify=true
+Keywords=emoji;picker;kaomoji;symbols;

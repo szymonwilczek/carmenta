@@ -2,3 +2,5 @@
 **/*.rs.bk
 Cargo.lock
 extension/schemas/gschemas.compiled
+cargo-sources.json
+org.carmenta.App.json

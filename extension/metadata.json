@@ -3,9 +3,6 @@
   "description": "Backend for Carmenta OmniPicker",
   "uuid": "carmenta@szymonwilczek.dev",
   "shell-version": [
-    "46",
-    "47",
-    "48",
     "49"
   ],
   "settings-schema": "org.gnome.shell.extensions.carmenta",
