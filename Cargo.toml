@@ -12,3 +12,4 @@ serde_json = "1.0"
 tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
 anyhow = "1.0"
 emojis = "0.8.0"
+unicode-blocks = "0.1.9"

@@ -35,9 +35,9 @@ impl CarmentaWindow {
         let kaomoji_page = crate::ui::kaomoji_grid::create_kaomoji_grid(&search_entry);
         stack.add_titled(&kaomoji_page, Some("kaomoji"), "Kaomoji");
 
-        // -- Clipboard Page --
-        let clipboard_page = gtk4::Label::new(Some("Clipboard History"));
-        stack.add_titled(&clipboard_page, Some("clipboard"), "Clipboard");
+        // -- Symbols Page --
+        let symbols_page = crate::ui::symbols_grid::create_symbols_grid(&search_entry);
+        stack.add_titled(&symbols_page, Some("symbols"), "Symbols");
 
         // View Switcher (Bottom Bar)
         let view_switcher = libadwaita::ViewSwitcherBar::builder()
