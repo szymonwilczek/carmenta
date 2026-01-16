@@ -1,9 +1,14 @@
 #!/bin/bash
 set -e
 
-UUID="carmenta@szymonwilczek.dev"
-EXTENSION_DIR="$HOME/.local/share/gnome-shell/extensions/$UUID"
 SOURCE_DIR="$(pwd)/extension"
+
+UUID=$(grep -oP '"uuid":\s*"\K[^"]+' "$SOURCE_DIR/metadata.json")
+if [ -z "$UUID" ]; then
+  echo "❌ Nie znaleziono UUID w metadata.json"
+  exit 1
+fi
+EXTENSION_DIR="$HOME/.local/share/gnome-shell/extensions/$UUID"
 
 echo "🔨 Kompilowanie schematów GSettings..."
 glib-compile-schemas "$SOURCE_DIR/schemas"
