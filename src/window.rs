@@ -124,6 +124,7 @@ impl CarmentaWindow {
 
         // Escape Key handler
         let key_controller = gtk4::EventControllerKey::new();
+        key_controller.set_propagation_phase(gtk4::PropagationPhase::Capture);
         let app_weak_key = app.downgrade();
         key_controller.connect_key_pressed(move |_, key, _, _| {
             if key == gtk4::gdk::Key::Escape {
