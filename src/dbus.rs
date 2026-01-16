@@ -1,13 +1,12 @@
 use zbus::Connection;
 use gtk4::gdk;
 use gtk4::prelude::*;
-use std::cell::RefCell;
+use tokio::sync::OnceCell;
 
 pub struct DBusClient;
 
-thread_local! {
-    static CONNECTION: RefCell<Option<Connection>> = RefCell::new(None);
-}
+// global async-safe connection cache
+static CONNECTION: OnceCell<Connection> = OnceCell::const_new();
 
 impl DBusClient {
     pub fn insert_or_copy(text: &str) {
@@ -44,38 +43,29 @@ impl DBusClient {
     pub fn pin_window(pinned: bool) {
         if let Some(rt) = crate::RUNTIME.get() {
             rt.spawn(async move {
-                if let Ok(conn) = Connection::session().await {
-                     let _ = conn.call_method(
-                        Some("org.gnome.Shell.Extensions.Carmenta"), 
-                        "/org/gnome/Shell/Extensions/Carmenta",    
-                        Some("org.gnome.Shell.Extensions.Carmenta"), 
-                        "PinWindow",
-                        &(pinned),
-                    ).await;
+                match Self::get_connection().await {
+                    Ok(conn) => {
+                        let _ = conn.call_method(
+                            Some("org.gnome.Shell.Extensions.Carmenta"), 
+                            "/org/gnome/Shell/Extensions/Carmenta",    
+                            Some("org.gnome.Shell.Extensions.Carmenta"), 
+                            "PinWindow",
+                            &(pinned),
+                        ).await;
+                    }
+                    Err(e) => eprintln!("DBus connection error: {}", e),
                 }
             });
         }
     }
 
     async fn get_connection() -> anyhow::Result<Connection> {
-        // Check cache first
-        let conn = CONNECTION.with(|cell| {
-            cell.borrow().clone()
-        });
-
-        if let Some(c) = conn {
-            return Ok(c);
-        }
-
-        // Establish new connection
-        let new_conn = Connection::session().await?;
+        // get or initialize connection
+        let conn: &Connection = CONNECTION.get_or_try_init(|| async {
+            Connection::session().await
+        }).await?;
         
-        // Cache it
-        CONNECTION.with(|cell| {
-            *cell.borrow_mut() = Some(new_conn.clone());
-        });
-
-        Ok(new_conn)
+        Ok(conn.clone())
     }
 
     async fn try_insert_via_extension(text: &str) -> anyhow::Result<()> {
