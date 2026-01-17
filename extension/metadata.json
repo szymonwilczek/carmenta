@@ -1,7 +1,8 @@
 {
   "name": "Carmenta",
-  "description": "Backend for Carmenta OmniPicker",
+  "description": "Companion extension for Carmenta - The connection bridge allowing text insertion (requires Carmenta app).",
   "uuid": "carmenta@szymonwilczek.dev",
+  "url": "https://github.com/szymonwilczek/carmenta",
   "shell-version": [
     "49"
   ],
