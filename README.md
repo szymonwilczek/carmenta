@@ -42,7 +42,17 @@ sudo dnf install carmenta
 ```
 
 ### Manual Build
-If you are not using Fedora or prefer to build from source:
+If you are not using Fedora or prefer to build from source, you will need the following dependencies:
+- `gtk4` (libgtk-4-dev)
+- `libadwaita` (libadwaita-1-dev)
+- `rust` / `cargo`
+
+**Example (Ubuntu 25.04+ / Debian)**:
+```bash
+sudo apt install libgtk-4-dev libadwaita-1-dev cargo
+```
+
+Then follow these steps:
 
 1.  Clone the repository:
     ```bash
@@ -51,7 +61,7 @@ If you are not using Fedora or prefer to build from source:
     ```
 2.  Run the installation script:
     ```bash
-    ./scripts/install.sh
+    ./scripts/install_app.sh
     ```
 
 ### Install Extension (Optional)
