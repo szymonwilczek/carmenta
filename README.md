@@ -28,10 +28,10 @@ Carmenta is engineered for speed and efficiency.
 ## 📦 Installation
 
 ### Fedora (Recommended)
-You can install Carmenta directly from the [COPR repository](https://copr.fedorainfracloud.org/coprs/szymonwilczek/carmenta/):
+You can install Carmenta directly from the [COPR repository](https://copr.fedorainfracloud.org/coprs/szymon-wilczek/carmenta/):
 
 ```bash
-sudo dnf copr enable szymonwilczek/carmenta
+sudo dnf copr enable szymon-wilczek/carmenta
 sudo dnf install carmenta
 ```
 
