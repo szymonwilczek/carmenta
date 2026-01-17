@@ -1,6 +1,39 @@
 #!/bin/bash
 set -e
 
+function install_dependencies() {
+    echo "🔍 Checking for dependencies..."
+    if [ -f /etc/os-release ]; then
+        . /etc/os-release
+        case $ID in
+            ubuntu|debian|pop|linuxmint)
+                echo "📦 Detected $NAME. Installing dependencies (requires sudo)..."
+                sudo apt update
+                sudo apt install -y libgtk-4-dev libadwaita-1-dev cargo
+                ;;
+            fedora|rhel|centos)
+                echo "📦 Detected $NAME. Installing dependencies (requires sudo)..."
+                sudo dnf install -y gtk4-devel libadwaita-devel cargo
+                ;;
+            arch|manjaro)
+                echo "📦 Detected $NAME. Installing dependencies (requires sudo)..."
+                sudo pacman -S --noconfirm gtk4 libadwaita rust
+                ;;
+            *)
+                echo "⚠️  Unknown distribution '$ID'. Please ensure you have the following installed:"
+                echo "   - gtk4 (development headers)"
+                echo "   - libadwaita (development headers)"
+                echo "   - rust / cargo"
+                read -p "Press Enter to continue..."
+                ;;
+        esac
+    else
+        echo "⚠️  Cannot detect OS. Please ensure dependencies are installed manually."
+    fi
+}
+
+install_dependencies
+
 echo "🚀 Building Carmenta (Release)..."
 cargo build --release
 
@@ -42,8 +75,11 @@ echo ""
 echo "---------------------------------"
 echo "👉 Next Steps:"
 echo "1. Ensure '$HOME/.local/bin' is in your PATH."
+
+echo "=== IF YOU'VE INSTALLED EXTENSION ==="
 echo "2. Restart GNOME Shell (Log out and log back in, or Alt+F2 -> r on X11)."
 echo "3. Enable 'Carmenta' in the 'Extensions' app."
-echo "4. Press Super+. (Meta+Period) to launch!"
+echo "====================================="
+echo "4. Configure the Custom Shortcut using run as \"carmenta\" and you are good to go!"
 echo ""
 echo "---------------------------------"
