@@ -1,12 +1,18 @@
+<p align="center">
+  <img src="./data/org.carmenta.App.png" alt="Carmenta Logo" width="200">
+</p>
+
 # Carmenta
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg) ![Rust](https://img.shields.io/badge/language-Rust-orange.svg) ![GTK4](https://img.shields.io/badge/toolkit-GTK4%20%2B%20Adwaita-green.svg)
 
-**Carmenta** is blazingly fast emoji picker for Linux desktops, built with Rust and GTK4. It integrates seamlessly with GNOME Shell to provide instant access to Emojis, Kaomojis, and mathematical symbols.
+**Carmenta** is minimal, fast emoji picker for Linux desktops, built with Rust and GTK4. It integrates with GNOME Shell to provide instant access to Emojis, Kaomojis, and various symbols.
+
+<p align="center">
+  <img src="./data/screenshots/main.png" alt="Preview" width="350">
+</p>
 
 ## 🚀 Performance
-Carmenta is engineered for speed and efficiency.
-
 | Metric | Result |
 | :--- | :--- |
 | **Startup Time** | **< 200ms** (Internal init: ~135ms) |
@@ -23,7 +29,7 @@ Carmenta is engineered for speed and efficiency.
   - ∑ **Symbols**: Math, currency, arrows, and more.
 - **Smart History**: Remembers your most used items.
 - **"Always on Top"**: Stays visible while you work, but gets out of the way when you don't need it.
-- **Seamless Integration**: Uses an optional, companion GNOME Shell extension for reliable text insertion into any application.
+- **Shell Integration**: Uses an optional, companion GNOME Shell extension for reliable text insertion into any application (Wayland workaround).
 
 ## 📦 Installation
 
@@ -49,10 +55,19 @@ If you are not using Fedora or prefer to build from source:
     ```
 
 ### Install Extension (Optional)
-Carmenta does not require a companion extension to function correctly, but it makes the work much easier. Currently, Wayland prohibits inserting anything from other applications into other windows. A workaround for this is a Companion extension that communicates with the application, allowing emoticons to be inserted.
+Carmenta does not require a companion extension to function correctly, but it makes the work much easier. 
+
+Currently, Wayland prohibits inserting anything from other applications into other windows. 
+A workaround for this is a Companion extension that communicates with the application, allowing emoticons to be inserted.
+
+
+> [!NOTE]
+> While I work for *GNOME Extensions* to submit a review, here's a guide to install the extension without it:
 
 1. Copy the `extension` folder to your GNOME Shell extensions directory:
 ```bash
+git clone https://github.com/szymonwilczek/carmenta.git
+cd carmenta
 mkdir -p ~/.local/share/gnome-shell/extensions/carmenta@szymonwilczek.dev
 cp -r extension/* ~/.local/share/gnome-shell/extensions/carmenta@szymonwilczek.dev/
 ```
@@ -60,7 +75,7 @@ cp -r extension/* ~/.local/share/gnome-shell/extensions/carmenta@szymonwilczek.d
 3. Enable the extension using the **Extensions** app.
 
 ## ⌨️ Usage
-- Launch Carmenta.
+- Launch Carmenta (can be binded to any **Custom Shortcut** as `carmenta`).
 - Type to search (or use Arrows and/or Tab/Ctrl-Tab to navigate around the app).
 - Click to copy & insert.
 - **Esc** to quit instantly.
