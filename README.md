@@ -62,7 +62,7 @@ A workaround for this is a Companion extension that communicates with the applic
 
 
 > [!NOTE]
-> While I work for *GNOME Extensions* to submit a review, here's a guide to install the extension without it:
+> While I wait for *GNOME Extensions'* review, here's a guide to install the extension without it:
 
 #### Installation Script
 
