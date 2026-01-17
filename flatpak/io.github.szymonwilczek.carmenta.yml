@@ -27,5 +27,3 @@ modules:
     sources:
       - type: dir
         path: .
-      # NOTE: For Flathub submission, generate cargo sources.
-      # See scripts/merge_manifest.py
