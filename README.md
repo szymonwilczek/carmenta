@@ -27,16 +27,26 @@ Carmenta is engineered for speed and efficiency.
 
 ## 📦 Installation
 
-### Prerequisites
-- Rust (cargo)
-- GTK4 & Libadwaita development libraries
+### Fedora (Recommended)
+You can install Carmenta directly from the [COPR repository](https://copr.fedorainfracloud.org/coprs/szymonwilczek/carmenta/):
 
-### Build
 ```bash
-git clone https://github.com/szymonwilczek/carmenta.git
-cd carmenta
-cargo build --release
+sudo dnf copr enable szymonwilczek/carmenta
+sudo dnf install carmenta
 ```
+
+### Manual Build
+If you are not using Fedora or prefer to build from source:
+
+1.  Clone the repository:
+    ```bash
+    git clone https://github.com/szymonwilczek/carmenta.git
+    cd carmenta
+    ```
+2.  Run the installation script:
+    ```bash
+    ./install.sh
+    ```
 
 ### Install Extension (Optional)
 Carmenta does not require a companion extension to function correctly, but it makes the work much easier. Currently, Wayland prohibits inserting anything from other applications into other windows. A workaround for this is a Companion extension that communicates with the application, allowing emoticons to be inserted.
