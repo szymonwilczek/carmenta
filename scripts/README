@@ -1,0 +1,24 @@
+SCRIPTS
+=======
+
+This folder contains scripts for the Carmenta project.
+
+install_app.sh
+--------------
+
+Use this script to install the Carmenta manually, not using the recommended COPR repository and COPR package. The output will be the same.
+
+install_extension.sh
+--------------------
+
+Use this script to install the Carmenta backend extension allowing you to simultanously copy & insert desired emoji instantly.
+The application WILL work without it, it's just for speeding things up. 
+
+I highly recommend you to INSTALL this one.
+
+package_extension.sh
+--------------------
+
+You will NOT need this one. It's just my script to create zip packages required for gnome-extensions to be published. I use it to apply patches.
+
+I mean, you can use it, if you for some magic reason need a zip package of this extension.
