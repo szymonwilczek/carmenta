@@ -4,6 +4,7 @@
   "uuid": "carmenta@szymonwilczek.dev",
   "url": "https://github.com/szymonwilczek/carmenta",
   "shell-version": [
+    "48",
     "49"
   ],
   "settings-schema": "org.gnome.shell.extensions.carmenta",
