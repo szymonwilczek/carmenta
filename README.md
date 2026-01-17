@@ -51,7 +51,7 @@ If you are not using Fedora or prefer to build from source:
     ```
 2.  Run the installation script:
     ```bash
-    ./install.sh
+    ./scripts/install.sh
     ```
 
 ### Install Extension (Optional)
@@ -64,6 +64,10 @@ A workaround for this is a Companion extension that communicates with the applic
 > [!NOTE]
 > While I work for *GNOME Extensions* to submit a review, here's a guide to install the extension without it:
 
+#### Installation Script
+
+I recommend you to install the extension via [installation script](./scripts/install_extension.sh), as it do all of these (listed below - but not the 2nd step, you'll still need to do that manually):
+
 1. Copy the `extension` folder to your GNOME Shell extensions directory:
 ```bash
 git clone https://github.com/szymonwilczek/carmenta.git
@@ -73,6 +77,8 @@ cp -r extension/* ~/.local/share/gnome-shell/extensions/carmenta@szymonwilczek.d
 ```
 2. Restart GNOME Shell (logout and login back).
 3. Enable the extension using the **Extensions** app.
+
+Obviously, if you want to do that steps yourself, that's fine and will work the same.
 
 ## ⌨️ Usage
 - Launch Carmenta (can be binded to any **Custom Shortcut** as `carmenta`).
