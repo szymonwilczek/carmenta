@@ -13,3 +13,5 @@ tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync", "time"
 anyhow = "1.0"
 emojis = "0.8.0"
 unicode-blocks = "0.1.9"
+reqwest = { version = "0.13.1", features = ["json"] }
+urlencoding = "2.1.3"

@@ -80,6 +80,11 @@ impl CarmentaWindow {
         let page = stack.add_titled(&symbols_page, Some("symbols"), "Symbols");
         page.set_icon_name(Some("preferences-desktop-font-symbolic"));
 
+        // -- GIF Page --
+        let gif_page = crate::ui::gif_grid::create_gif_grid(&search_entry);
+        let page = stack.add_titled(&gif_page, Some("gifs"), "GIFs");
+        page.set_icon_name(Some("emblem-photos-symbolic"));
+
         // View Switcher (Bottom Bar)
         let view_switcher = libadwaita::ViewSwitcherBar::builder()
             .stack(&stack)
