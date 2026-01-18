@@ -1,5 +1,5 @@
 Name:           carmenta
-Version:        0.1.0
+Version:        0.2.0
 Release:        1%{?dist}
 Summary:        A GTK4 Emoji Picker for GNOME
 
@@ -45,5 +45,9 @@ appstream-util validate-relax --nonet %{buildroot}%{_metainfodir}/*.metainfo.xml
 %{_metainfodir}/*.metainfo.xml
 
 %changelog
+* Sun Jan 18 2026 Szymon Wilczek <szymonwilczek@github> - 0.2.0-1
+- Added GIF support (powered by Klipy)
+- Improved search performance
+
 * Fri Jan 16 2026 Szymon Wilczek <szymonwilczek@github> - 0.1.0-1
 - Initial release
