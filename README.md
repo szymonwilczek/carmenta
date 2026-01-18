@@ -6,7 +6,7 @@
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg) ![Rust](https://img.shields.io/badge/language-Rust-orange.svg) ![GTK4](https://img.shields.io/badge/toolkit-GTK4%20%2B%20Adwaita-green.svg)
 
-**Carmenta** is minimal, fast emoji picker for Linux desktops, built with Rust and GTK4. It integrates with GNOME Shell to provide instant access to Emojis, Kaomojis, and various symbols.
+**Carmenta** is minimal, fast emoji picker for Linux desktops, built with Rust and GTK4. It integrates with GNOME Shell to provide instant access to Emojis, Kaomojis, Symbols, and GIFs.
 
 <p align="center">
   <img src="./data/screenshots/main.png" alt="Preview" width="350">
@@ -23,10 +23,11 @@
 
 ## ✨ Features
 - **Instant Search**: Localized, debounce-optimized search for thousands of items.
-- **Three Modes**:
+- **Four Modes**:
   - 😃 **Emoji**: Full Unicode support with categories and skin tones.
   - (◕‿◕) **Kaomoji**: Extensive library of Japanese emoticons.
   - ∑ **Symbols**: Math, currency, arrows, and more.
+  - 🎬 **GIFs**: Search millions of animated GIFs powered by **Klipy**.
 - **Smart History**: Remembers your most used items.
 - **"Always on Top"**: Stays visible while you work, but gets out of the way when you don't need it.
 - **Shell Integration**: Uses an optional, companion GNOME Shell extension for reliable text insertion into any application (Wayland workaround).
