@@ -17,7 +17,7 @@
 | :--- | :--- |
 | **Startup Time** | **< 200ms** (Internal init: ~135ms) |
 | **Insertion Latency** | **~1.2ms** |
-| **Memory Usage** | **~105MB** (RSS) |
+| **Memory Usage** | **~0.75MB** (RSS) |
 
 *Measured on standard hardware.*
 
