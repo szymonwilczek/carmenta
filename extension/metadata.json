@@ -1,6 +1,6 @@
 {
   "name": "Carmenta",
-  "description": "Companion extension for Carmenta - The connection bridge allowing text insertion (requires Carmenta app).",
+  "description": "Companion extension for Carmenta - The connection bridge allowing text insertion (requires Carmenta app). This extension writes text to the clipboard to perform insertion.",
   "uuid": "carmenta@szymonwilczek.dev",
   "url": "https://github.com/szymonwilczek/carmenta",
   "shell-version": [
@@ -8,5 +8,5 @@
     "49"
   ],
   "settings-schema": "org.gnome.shell.extensions.carmenta",
-  "version": 1
+  "version": 4
 }

@@ -33,6 +33,8 @@ export default class CarmentaExtension extends Extension {
     this._dbusImpl = null;
     this._ownNameId = null;
     this._virtualDevice = null;
+    this._insertTimeoutId = null;
+    this._focusTimeoutId = null;
   }
 
   enable() {
@@ -41,7 +43,7 @@ export default class CarmentaExtension extends Extension {
     this._registerKeybinding();
     this._trackFocus();
 
-    // Virtual Keyboard device setup
+    // virtual keyboard device setup
     this._virtualDevice = Clutter.get_default_backend()
       .get_default_seat()
       .create_virtual_device(
@@ -59,11 +61,16 @@ export default class CarmentaExtension extends Extension {
     this._untrackFocus();
     this._dbus = null;
 
-    if (this._virtualDevice) {
-      // Virtual devices are destroyed automatically when seat is disposed,
-      // but explicitly clearing reference is good.
-      // run_dispose() is not exposed to JS usually, just null it.
+    if (this._insertTimeoutId) {
+      GLib.Source.remove(this._insertTimeoutId);
+      this._insertTimeoutId = null;
     }
+
+    if (this._focusTimeoutId) {
+      GLib.Source.remove(this._focusTimeoutId);
+      this._focusTimeoutId = null;
+    }
+
     this._virtualDevice = null;
     this._lastFocusedWindow = null;
   }
@@ -119,7 +126,7 @@ export default class CarmentaExtension extends Extension {
   _trackFocus() {
     this._windowFocusId = global.display.connect("notify::focus-window", () => {
       let win = global.display.focus_window;
-      // Ignore our own window
+      // ignore our own window
       if (win) {
         const wmClass = win.get_wm_class();
         if (wmClass && !wmClass.toLowerCase().includes("carmenta")) {
@@ -136,18 +143,17 @@ export default class CarmentaExtension extends Extension {
     }
   }
 
-  // DBus Methods
   Ping() {
     return "Pong";
   }
 
   PinWindow(pinned) {
-    // Find Carmenta Window
+    // find carmenta window
     let carmentaWin = this._findCarmentaWindow();
     if (carmentaWin) {
       if (pinned) {
         carmentaWin.make_above();
-        carmentaWin.stick(); // Make it visible on all workspaces (optional, but good for widgets)
+        carmentaWin.stick(); // visible on all workspaces
         console.log("Carmenta: Window set to ALWAYS ON TOP + STICKY");
       } else {
         carmentaWin.unmake_above();
@@ -162,27 +168,30 @@ export default class CarmentaExtension extends Extension {
     console.log(`Carmenta: Injecting text '${text}'`);
 
     if (this._lastFocusedWindow) {
-      // 1. Activate target
+      // activate target
       this._lastFocusedWindow.activate(global.get_current_time());
 
-      // 2. Copy and Paste
-      // small timeout to allow focus switch to target
-      GLib.timeout_add(GLib.PRIORITY_DEFAULT, 1, () => {
+      // copy and paste
+      this._insertTimeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 1, () => {
         this._copyToClipboard(text);
         this._sendCtrlV();
+        this._insertTimeoutId = null;
 
-        // 3. Return Focus to Carmenta (Boomerang)
-        // wait slightly longer to ensure Ctrl+V was registered by the target
-        GLib.timeout_add(GLib.PRIORITY_DEFAULT, 10, () => {
-          let carmentaWin = this._findCarmentaWindow();
-          if (carmentaWin) {
-            carmentaWin.activate(global.get_current_time());
-            // Re-enforce above state just in case
-            carmentaWin.make_above();
-            console.log("Carmenta: Focus returned");
-          }
-          return GLib.SOURCE_REMOVE;
-        });
+        // return focus to carmenta
+        this._focusTimeoutId = GLib.timeout_add(
+          GLib.PRIORITY_DEFAULT,
+          10,
+          () => {
+            let carmentaWin = this._findCarmentaWindow();
+            if (carmentaWin) {
+              carmentaWin.activate(global.get_current_time());
+              carmentaWin.make_above();
+              console.log("Carmenta: Focus returned");
+            }
+            this._focusTimeoutId = null;
+            return GLib.SOURCE_REMOVE;
+          },
+        );
 
         return GLib.SOURCE_REMOVE;
       });
@@ -274,7 +283,6 @@ export default class CarmentaExtension extends Extension {
           return; // exit if successful
         }
 
-        // fallback: flatpak
         try {
           let flatpakLauncher = new Gio.SubprocessLauncher({
             flags:
