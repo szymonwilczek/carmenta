@@ -172,12 +172,22 @@ export default class CarmentaExtension extends Extension {
       this._lastFocusedWindow.activate(global.get_current_time());
 
       // copy and paste
+      if (this._insertTimeoutId) {
+        GLib.Source.remove(this._insertTimeoutId);
+        this._insertTimeoutId = null;
+      }
+
       this._insertTimeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 1, () => {
         this._copyToClipboard(text);
         this._sendCtrlV();
         this._insertTimeoutId = null;
 
         // return focus to carmenta
+        if (this._focusTimeoutId) {
+          GLib.Source.remove(this._focusTimeoutId);
+          this._focusTimeoutId = null;
+        }
+
         this._focusTimeoutId = GLib.timeout_add(
           GLib.PRIORITY_DEFAULT,
           10,
