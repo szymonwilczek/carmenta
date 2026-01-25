@@ -68,9 +68,9 @@ Carmenta does not require a companion extension to function correctly, but it ma
 Currently, Wayland prohibits inserting anything from other applications into other windows. 
 A workaround for this is a Companion extension that communicates with the application, allowing emoticons to be inserted.
 
+Extension can be found on [GNOME Extensions](https://extensions.gnome.org/extension/9179/carmenta/)
 
-> [!NOTE]
-> While I wait for *GNOME Extensions'* review, here's a guide to install the extension without it:
+Manual options:
 
 #### Installation Script
 
