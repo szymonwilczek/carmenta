@@ -78,7 +78,10 @@ impl CarmentaApp {
     }
 
     pub fn run(&self) {
-        self.app.run();
+        let argv0 = std::env::args()
+            .next()
+            .unwrap_or_else(|| "carmenta".to_string());
+        self.app.run_with_args(&[argv0]);
     }
 
     fn on_activate(app: &Application, config: &AppConfig) {
