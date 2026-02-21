@@ -53,11 +53,7 @@ impl DBusClient {
             Self::copy_to_clipboard(&text);
             gtk4::glib::timeout_add_local_once(
                 Duration::from_millis(100),
-                || {
-                    if let Some(app) = gtk4::gio::Application::default() {
-                        app.quit();
-                    }
-                }
+                || crate::app::request_default_quit()
             );
         });
     }

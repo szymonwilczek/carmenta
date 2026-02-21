@@ -2,6 +2,8 @@ use gtk4::prelude::*;
 use libadwaita::{Application, ApplicationWindow};
 use gtk4::{Box, Orientation, SearchEntry, gio};
 use gtk4::glib;
+use std::cell::RefCell;
+use std::rc::Rc;
 
 pub struct CarmentaWindow {
     pub window: ApplicationWindow,
@@ -29,7 +31,7 @@ impl CarmentaWindow {
             let app_weak = app.downgrade();
             action_quit.connect_activate(move |_, _| {
                 if let Some(a) = app_weak.upgrade() {
-                    a.quit();
+                    crate::app::request_quit(a.upcast_ref());
                 }
             });
             app.add_action(&action_quit);
@@ -117,23 +119,58 @@ impl CarmentaWindow {
             }
         });
 
-        window.connect_is_active_notify(move |win| {
-            if !win.is_active() {
-                let win_weak = win.downgrade();
-                glib::timeout_add_local(std::time::Duration::from_millis(200), move || {
-                    if let Some(w) = win_weak.upgrade() {
-                         let is_inserting = crate::app::IS_INSERTING.with(|f| *f.borrow());
-                         if !w.is_active() && !is_inserting {
-                             println!("Focus lost confirmed -> Closing App");
-                             if let Some(app) = w.application() {
-                                 app.quit();
-                             }
-                         }
+        window.connect_close_request(move |win| {
+            crate::dbus::DBusClient::pin_window(false);
+            if let Some(app) = win.application() {
+                crate::app::request_quit(&app);
+            }
+            glib::Propagation::Proceed
+        });
+
+        let focus_loss_checker: Rc<RefCell<Option<glib::SourceId>>> = Rc::new(RefCell::new(None));
+        window.connect_is_active_notify(glib::clone!(
+            #[strong] focus_loss_checker,
+            move |win| {
+                if win.is_active() {
+                    if let Some(source_id) = focus_loss_checker.borrow_mut().take() {
+                        source_id.remove();
                     }
+                    return;
+                }
+
+                if focus_loss_checker.borrow().is_some() {
+                    return;
+                }
+
+                let win_weak = win.downgrade();
+                let focus_loss_checker_for_timer = focus_loss_checker.clone();
+                let checker = glib::timeout_add_local(std::time::Duration::from_millis(120), move || {
+                    let Some(w) = win_weak.upgrade() else {
+                        *focus_loss_checker_for_timer.borrow_mut() = None;
+                        return glib::ControlFlow::Break;
+                    };
+
+                    if w.is_active() {
+                        *focus_loss_checker_for_timer.borrow_mut() = None;
+                        return glib::ControlFlow::Break;
+                    }
+
+                    let is_inserting = crate::app::IS_INSERTING.with(|f| *f.borrow());
+                    if is_inserting {
+                        return glib::ControlFlow::Continue;
+                    }
+
+                    println!("Focus lost confirmed -> Closing App");
+                    if let Some(app) = w.application() {
+                        crate::app::request_quit(&app);
+                    }
+                    *focus_loss_checker_for_timer.borrow_mut() = None;
                     glib::ControlFlow::Break
                 });
+
+                *focus_loss_checker.borrow_mut() = Some(checker);
             }
-        });
+        ));
 
         // Escape Key handler
         let key_controller = gtk4::EventControllerKey::new();
@@ -142,7 +179,7 @@ impl CarmentaWindow {
         key_controller.connect_key_pressed(move |_, key, _, _| {
             if key == gtk4::gdk::Key::Escape {
                 if let Some(a) = app_weak_key.upgrade() {
-                    a.quit();
+                    crate::app::request_quit(a.upcast_ref());
                 }
                 return glib::Propagation::Stop;
             }
