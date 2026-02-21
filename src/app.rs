@@ -1,10 +1,11 @@
-use gtk4::glib;
+use crate::config::AppConfig;
+use crate::window::CarmentaWindow;
 use gtk4::gio;
+use gtk4::glib;
 use gtk4::prelude::*;
 use gtk4::Application as GtkApplication;
 use libadwaita::Application;
 use std::cell::RefCell;
-use crate::window::CarmentaWindow;
 
 // Global state to track insertion
 thread_local! {
@@ -15,7 +16,7 @@ thread_local! {
 
 pub fn mark_inserting() {
     IS_INSERTING.with(|f| *f.borrow_mut() = true);
-    
+
     INSERT_TIMER.with(|t| {
         if let Some(source) = t.borrow_mut().take() {
             source.remove();
@@ -68,12 +69,10 @@ pub struct CarmentaApp {
 }
 
 impl CarmentaApp {
-    pub fn new(app_id: &str) -> Self {
-        let app = Application::builder()
-            .application_id(app_id)
-            .build();
+    pub fn new(app_id: &str, config: AppConfig) -> Self {
+        let app = Application::builder().application_id(app_id).build();
 
-        app.connect_activate(Self::on_activate);
+        app.connect_activate(move |app| Self::on_activate(app, &config));
 
         Self { app }
     }
@@ -82,11 +81,11 @@ impl CarmentaApp {
         self.app.run();
     }
 
-    fn on_activate(app: &Application) {
+    fn on_activate(app: &Application, config: &AppConfig) {
         // prefetching DBus connection to avoid flicker on first insert
         crate::dbus::DBusClient::init_connection();
-        
-        let window = CarmentaWindow::new(app);
+
+        let window = CarmentaWindow::new(app, config);
         window.present();
     }
 }

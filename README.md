@@ -13,15 +13,17 @@
 </p>
 
 ## 🚀 Performance
-| Metric | Result |
-| :--- | :--- |
-| **Startup Time** | **< 200ms** (Internal init: ~135ms) |
-| **Insertion Latency** | **~1.2ms** |
-| **Memory Usage** | **~0.75MB** (RSS) |
 
-*Measured on standard hardware.*
+| Metric                | Result                              |
+| :-------------------- | :---------------------------------- |
+| **Startup Time**      | **< 200ms** (Internal init: ~135ms) |
+| **Insertion Latency** | **~1.2ms**                          |
+| **Memory Usage**      | **~0.75MB** (RSS)                   |
+
+_Measured on standard hardware._
 
 ## ✨ Features
+
 - **Instant Search**: Localized, debounce-optimized search for thousands of items.
 - **Four Modes**:
   - 😃 **Emoji**: Full Unicode support with categories and skin tones.
@@ -35,6 +37,7 @@
 ## 📦 Installation
 
 ### Fedora (Recommended)
+
 You can install Carmenta directly from the [COPR repository](https://copr.fedorainfracloud.org/coprs/szymon-wilczek/carmenta/):
 
 ```bash
@@ -43,9 +46,11 @@ sudo dnf install carmenta
 ```
 
 ### Manual Build
+
 If you are not using Fedora or prefer to build from source, the installation script will attempt to install necessary dependencies for you (on Ubuntu/Debian, Fedora, Arch).
 
 If the script fails to install dependencies, you will need:
+
 - `gtk4` (libgtk-4-dev)
 - `libadwaita` (libadwaita-1-dev)
 - `rust` / `cargo`
@@ -63,9 +68,10 @@ If the script fails to install dependencies, you will need:
     ```
 
 ### Install Extension (Optional)
-Carmenta does not require a companion extension to function correctly, but it makes the work much easier. 
 
-Currently, Wayland prohibits inserting anything from other applications into other windows. 
+Carmenta does not require a companion extension to function correctly, but it makes the work much easier.
+
+Currently, Wayland prohibits inserting anything from other applications into other windows.
 A workaround for this is a Companion extension that communicates with the application, allowing emoticons to be inserted.
 
 Extension can be found on [GNOME Extensions](https://extensions.gnome.org/extension/9179/carmenta/)
@@ -77,19 +83,68 @@ Manual options:
 I recommend you to install the extension via [installation script](./scripts/install_extension.sh), as it do all of these (listed below - but not the 2nd step, you'll still need to do that manually):
 
 1. Copy the `extension` folder to your GNOME Shell extensions directory:
+
 ```bash
 git clone https://github.com/szymonwilczek/carmenta.git
 cd carmenta
 mkdir -p ~/.local/share/gnome-shell/extensions/carmenta@szymonwilczek.dev
 cp -r extension/* ~/.local/share/gnome-shell/extensions/carmenta@szymonwilczek.dev/
 ```
+
 2. Restart GNOME Shell (logout and login back).
 3. Enable the extension using the **Extensions** app.
 
 Obviously, if you want to do that steps yourself, that's fine and will work the same.
 
 ## ⌨️ Usage
+
 - Launch Carmenta (can be binded to any **Custom Shortcut** as `carmenta`).
 - Type to search (or use Arrows and/or Tab/Ctrl-Tab to navigate around the app).
 - Click to copy & insert.
 - **Esc** to quit instantly.
+
+### CLI options
+
+You can launch Carmenta with runtime configuration:
+
+```bash
+carmenta --width 420 --height 480
+```
+
+Available options:
+
+- `--width <px>` - fixed window width, range: `280..=1400`
+- `--height <px>` - fixed window height, range: `320..=1400`
+- `--disable-gifs` - hides GIF tab (can improve performance and lower network usage)
+
+Examples:
+
+```bash
+# Smaller, fixed window
+carmenta --width 320 --height 380
+
+# Performance mode (without GIF tab)
+carmenta --disable-gifs
+
+# Both combined
+carmenta --width 360 --height 420 --disable-gifs
+```
+
+## 🪵 Debugging / logs
+
+When Carmenta crashes (for example during `Esc`), these are the most useful places to inspect logs:
+
+```bash
+# If you run app directly from terminal
+RUST_BACKTRACE=1 carmenta
+
+# Follow user-level journal logs live
+journalctl --user -f | grep -i carmenta
+
+# Logs from current boot only
+journalctl --user -b | grep -i carmenta
+
+# Crash dumps / segfault traces
+coredumpctl list | grep -i carmenta
+coredumpctl info <PID_OR_EXE>
+```
