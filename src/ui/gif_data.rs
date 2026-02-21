@@ -17,7 +17,6 @@ fn get_api_key() -> String {
 
 #[derive(Debug, Deserialize)]
 pub struct KlipyApiResponse {
-    pub result: bool,
     pub data: KlipyDataWrapper,
 }
 
@@ -44,14 +43,11 @@ pub struct KlipyFileFormats {
 #[derive(Debug, Deserialize)]
 pub struct KlipyQuality {
     pub gif: Option<KlipyMedia>,
-    pub webp: Option<KlipyMedia>,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct KlipyMedia {
     pub url: String,
-    pub width: Option<u32>,
-    pub height: Option<u32>,
 }
 
 // plain data structure (Send + Sync) for threading

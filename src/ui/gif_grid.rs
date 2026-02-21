@@ -3,7 +3,7 @@ use gtk4::{
     gio, glib, GridView, SignalListItemFactory, SingleSelection,
     PolicyType, ScrolledWindow, Box, Orientation, Spinner
 };
-use super::gif_data::{GifObject, GifData, search_gifs, get_trending_gifs};
+use super::gif_data::{GifObject, search_gifs, get_trending_gifs};
 use crate::dbus::DBusClient;
 use std::cell::RefCell;
 use std::rc::Rc;
