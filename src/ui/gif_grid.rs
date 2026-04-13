@@ -7,6 +7,7 @@ use super::gif_data::{GifObject, search_gifs, get_trending_gifs};
 use crate::dbus::DBusClient;
 use std::cell::RefCell;
 use std::rc::Rc;
+use std::time::SystemTime;
 
 // helper function: copy URL and insert via extension
 fn insert_gif_url(url: String) {
@@ -100,54 +101,62 @@ pub fn create_gif_grid(search_entry: &gtk4::SearchEntry) -> Box {
         let full_url = gif_obj.full_url();
         let gif_id = gif_obj.id();
 
-        // store full URL in widget name
         button.set_widget_name(&full_url);
 
-        // load GIF asynchronously
         let picture_weak = picture.downgrade();
         let full_url_check = full_url.clone();
         
         spawn_tokio(
             async move {
-                let client = reqwest::Client::new();
-                match client.get(&preview_url).send().await {
-                    Ok(response) => response.bytes().await.ok().map(|b| (b, gif_id)),
-                    Err(e) => {
-                        eprintln!("Failed to fetch GIF: {}", e);
-                        None
+                if let Some(client) = crate::CLIENT.get() {
+                    match client.get(&preview_url).send().await {
+                        Ok(response) => response.bytes().await.ok().map(|b| (b, gif_id)),
+                        Err(e) => {
+                            eprintln!("Failed to fetch GIF: {}", e);
+                            None
+                        }
                     }
+                } else {
+                    None
                 }
             },
             move |result_opt| {
-                if let Some((bytes, id)) = result_opt {
+                if let Some((bytes, _id)) = result_opt {
                     if let Some(pic) = picture_weak.upgrade() {
                         if let Some(parent) = pic.parent() {
                              if let Ok(btn) = parent.downcast::<gtk4::Button>() {
                                  if btn.widget_name() != full_url_check {
-                                     // widget reused for another item, discard result
                                      return;
                                  }
-                                 
-                                 // check if widget is still in the component tree
-                                 if pic.root().is_none() {
-                                     return;
-                                 }
-                             } else {
-                                 return;
                              }
-                        } else {
-                            return;
                         }
 
-                        let temp_dir = std::env::temp_dir();
-                        let temp_path = temp_dir.join(format!("carmenta_gif_{}.gif", id));
-                        
-                        if std::fs::write(&temp_path, &bytes).is_ok() {
-                            let file = gio::File::for_path(&temp_path);
-                            let media = gtk4::MediaFile::for_file(&file);
-                            media.set_loop(true);
-                            media.play();
-                            pic.set_paintable(Some(&media));
+                        // Use PixbufAnimation to drive the animation manually.
+                        // This avoids GStreamer pipelines entirely while keeping the animation.
+                        let stream = gio::MemoryInputStream::from_bytes(&glib::Bytes::from(&bytes));
+                        if let Ok(anim) = gdk_pixbuf::PixbufAnimation::from_stream(&stream, None::<&gio::Cancellable>) {
+                            let iter = anim.iter(None);
+                            
+                            // Drive the first frame
+                            let pixbuf = iter.pixbuf();
+                            let texture = gtk4::gdk::Texture::for_pixbuf(&pixbuf);
+                            pic.set_paintable(Some(&texture));
+                            
+                            // Start the loop
+                            let delay = iter.delay_time().map(|d| d.as_millis()).unwrap_or(100);
+                            let pic_weak_loop = pic.downgrade();
+                            glib::timeout_add_local(std::time::Duration::from_millis(delay as u64), move || {
+                                if let Some(p) = pic_weak_loop.upgrade() {
+                                    if p.paintable().is_some() {
+                                        iter.advance(SystemTime::now());
+                                        let pixbuf = iter.pixbuf();
+                                        let texture = gtk4::gdk::Texture::for_pixbuf(&pixbuf);
+                                        p.set_paintable(Some(&texture));
+                                        return glib::ControlFlow::Continue;
+                                    }
+                                }
+                                glib::ControlFlow::Break
+                            });
                         }
                     }
                 }
@@ -155,22 +164,14 @@ pub fn create_gif_grid(search_entry: &gtk4::SearchEntry) -> Box {
         );
     });
 
-    // cleanup MediaFile when item is unbound
-    // without it there is loud and sexy segfault
     factory.connect_unbind(move |_factory, item| {
+        let item = item.downcast_ref::<gtk4::ListItem>().unwrap();
         if let Some(button) = item.child() {
             if let Ok(button) = button.downcast::<gtk4::Button>() {
                 button.set_widget_name("");
-                
                 if let Some(picture) = button.child() {
                     if let Ok(picture) = picture.downcast::<gtk4::Picture>() {
-                        // get current paintable & stop it
-                        if let Some(paintable) = picture.paintable() {
-                            if let Ok(media) = paintable.downcast::<gtk4::MediaFile>() {
-                                media.set_playing(false); // stop playing immediately
-                            }
-                        }
-                        // clear the paintable
+                        // Clearing the paintable stops the glib::timeout loop
                         picture.set_paintable(None::<&gtk4::gdk::Paintable>);
                     }
                 }
@@ -205,7 +206,6 @@ pub fn create_gif_grid(search_entry: &gtk4::SearchEntry) -> Box {
         #[strong] store_weak,
         #[strong] spinner_weak,
         move |entry| {
-            // cancel previous debounce timer
             if let Some(source_id) = debounce_source.borrow_mut().take() {
                 let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
                     source_id.remove();
@@ -217,7 +217,6 @@ pub fn create_gif_grid(search_entry: &gtk4::SearchEntry) -> Box {
             let spinner_weak_clone = spinner_weak.clone();
             let debounce_source_clone = debounce_source.clone();
 
-            // start debounce timer
             let source_id = glib::timeout_add_local_once(
                 std::time::Duration::from_millis(300),
                 move || {
@@ -267,7 +266,6 @@ pub fn create_gif_grid(search_entry: &gtk4::SearchEntry) -> Box {
         }
     ));
 
-    // load trending GIFs on startup
     let store_init = store.clone();
     let spinner_init = spinner.clone();
     spinner_init.set_visible(true);
@@ -295,4 +293,3 @@ pub fn create_gif_grid(search_entry: &gtk4::SearchEntry) -> Box {
 
     container
 }
-
