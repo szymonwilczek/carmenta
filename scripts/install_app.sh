@@ -7,17 +7,50 @@ function install_dependencies() {
         . /etc/os-release
         case $ID in
             ubuntu|debian|pop|linuxmint)
-                echo "📦 Detected $NAME. Installing dependencies (requires sudo)..."
-                sudo apt update
-                sudo apt install -y libgtk-4-dev libadwaita-1-dev cargo
+                echo "📦 Detected $NAME."
+                echo "   The following packages are required:"
+                echo "     libgtk-4-dev libadwaita-1-dev cargo"
+                echo ""
+                echo "⚠️  Note: installing 'cargo' from apt may conflict with rustup."
+                echo "   If you use rustup, skip this step and ensure cargo is in your PATH."
+                echo ""
+                read -p "Install dependencies via apt? [y/N] " -n 1 -r
+                echo
+                if [[ $REPLY =~ ^[Yy]$ ]]; then
+                    sudo apt update
+                    sudo apt install libgtk-4-dev libadwaita-1-dev cargo
+                else
+                    echo "Skipping automatic dependency installation."
+                    echo "Please ensure the required packages are installed manually."
+                fi
                 ;;
             fedora|rhel|centos)
-                echo "📦 Detected $NAME. Installing dependencies (requires sudo)..."
-                sudo dnf install -y gtk4-devel libadwaita-devel cargo
+                echo "📦 Detected $NAME."
+                echo "   The following packages are required:"
+                echo "     gtk4-devel libadwaita-devel cargo"
+                echo ""
+                read -p "Install dependencies via dnf? [y/N] " -n 1 -r
+                echo
+                if [[ $REPLY =~ ^[Yy]$ ]]; then
+                    sudo dnf install gtk4-devel libadwaita-devel cargo
+                else
+                    echo "Skipping automatic dependency installation."
+                    echo "Please ensure the required packages are installed manually."
+                fi
                 ;;
             arch|manjaro)
-                echo "📦 Detected $NAME. Installing dependencies (requires sudo)..."
-                sudo pacman -S --noconfirm gtk4 libadwaita rust
+                echo "📦 Detected $NAME."
+                echo "   The following packages are required:"
+                echo "     gtk4 libadwaita rust"
+                echo ""
+                read -p "Install dependencies via pacman? [y/N] " -n 1 -r
+                echo
+                if [[ $REPLY =~ ^[Yy]$ ]]; then
+                    sudo pacman -S gtk4 libadwaita rust
+                else
+                    echo "Skipping automatic dependency installation."
+                    echo "Please ensure the required packages are installed manually."
+                fi
                 ;;
             *)
                 echo "⚠️  Unknown distribution '$ID'. Please ensure you have the following installed:"
