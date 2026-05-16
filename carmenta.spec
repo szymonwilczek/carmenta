@@ -1,5 +1,5 @@
 Name:           carmenta
-Version:        0.3.0
+Version:        0.3.1
 Release:        1%{?dist}
 Summary:        A GTK4 Emoji Picker for GNOME
 
@@ -13,6 +13,7 @@ BuildRequires:  gtk4-devel
 BuildRequires:  libadwaita-devel
 BuildRequires:  desktop-file-utils
 BuildRequires:  libappstream-glib
+BuildRequires:  gdk-pixbuf2-devel
 
 Requires:       gtk4
 Requires:       libadwaita
@@ -45,6 +46,12 @@ appstream-util validate-relax --nonet %{buildroot}%{_metainfodir}/*.metainfo.xml
 %{_metainfodir}/*.metainfo.xml
 
 %changelog
+* Sat May 17 2026 Szymon Wilczek <szymonwilczek@github> - 0.3.1-1
+- Fix segfault caused by GtkMediaFile race condition in GIF grid
+- Fix file descriptor leak by switching to gdk-pixbuf animation
+- Use global reqwest::Client to eliminate socket exhaustion
+- Add gdk-pixbuf dependency for GIF preview rendering
+
 * Sat Feb 21 2026 Szymon Wilczek <szymonwilczek@github> - 0.3.0-1
 - Add CLI runtime config (window width/height bounds, optional GIF tab)
 - Improve shutdown stability on Escape and focus loss

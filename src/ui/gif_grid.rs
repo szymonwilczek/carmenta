@@ -101,8 +101,10 @@ pub fn create_gif_grid(search_entry: &gtk4::SearchEntry) -> Box {
         let full_url = gif_obj.full_url();
         let gif_id = gif_obj.id();
 
+        // store full URL in widget name
         button.set_widget_name(&full_url);
 
+        // load GIF asynchronously
         let picture_weak = picture.downgrade();
         let full_url_check = full_url.clone();
         
@@ -126,9 +128,19 @@ pub fn create_gif_grid(search_entry: &gtk4::SearchEntry) -> Box {
                         if let Some(parent) = pic.parent() {
                              if let Ok(btn) = parent.downcast::<gtk4::Button>() {
                                  if btn.widget_name() != full_url_check {
+                                     // widget reused for another item, discard result
                                      return;
                                  }
+
+                                 // check if widget is still in the component tree
+                                 if pic.root().is_none() {
+                                     return;
+                                 }
+                             } else {
+                                 return;
                              }
+                        } else {
+                            return;
                         }
 
                         // Use PixbufAnimation to drive the animation manually.
@@ -137,15 +149,15 @@ pub fn create_gif_grid(search_entry: &gtk4::SearchEntry) -> Box {
                         if let Ok(anim) = gdk_pixbuf::PixbufAnimation::from_stream(&stream, None::<&gio::Cancellable>) {
                             let iter = anim.iter(None);
                             
-                            // Drive the first frame
+                            // drive the first frame
                             let pixbuf = iter.pixbuf();
                             let texture = gtk4::gdk::Texture::for_pixbuf(&pixbuf);
                             pic.set_paintable(Some(&texture));
                             
-                            // Start the loop
-                            let delay = iter.delay_time().map(|d| d.as_millis()).unwrap_or(100);
+                            // advance animation on GTK main loop with per-frame delay
+                            let initial_delay = iter.delay_time().map(|d| d.as_millis()).unwrap_or(100);
                             let pic_weak_loop = pic.downgrade();
-                            glib::timeout_add_local(std::time::Duration::from_millis(delay as u64), move || {
+                            glib::timeout_add_local(std::time::Duration::from_millis(initial_delay as u64), move || {
                                 if let Some(p) = pic_weak_loop.upgrade() {
                                     if p.paintable().is_some() {
                                         iter.advance(SystemTime::now());
@@ -164,6 +176,8 @@ pub fn create_gif_grid(search_entry: &gtk4::SearchEntry) -> Box {
         );
     });
 
+    // cleanup paintable when item is unbound
+    // clearing paintable terminates the glib::timeout animation loop
     factory.connect_unbind(move |_factory, item| {
         let item = item.downcast_ref::<gtk4::ListItem>().unwrap();
         if let Some(button) = item.child() {
@@ -206,6 +220,7 @@ pub fn create_gif_grid(search_entry: &gtk4::SearchEntry) -> Box {
         #[strong] store_weak,
         #[strong] spinner_weak,
         move |entry| {
+            // cancel previous debounce timer
             if let Some(source_id) = debounce_source.borrow_mut().take() {
                 let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
                     source_id.remove();
@@ -217,6 +232,7 @@ pub fn create_gif_grid(search_entry: &gtk4::SearchEntry) -> Box {
             let spinner_weak_clone = spinner_weak.clone();
             let debounce_source_clone = debounce_source.clone();
 
+            // start debounce timer
             let source_id = glib::timeout_add_local_once(
                 std::time::Duration::from_millis(300),
                 move || {
@@ -266,6 +282,7 @@ pub fn create_gif_grid(search_entry: &gtk4::SearchEntry) -> Box {
         }
     ));
 
+    // load trending GIFs on startup
     let store_init = store.clone();
     let spinner_init = spinner.clone();
     spinner_init.set_visible(true);
