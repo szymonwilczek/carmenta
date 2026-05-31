@@ -199,4 +199,12 @@ impl CarmentaWindow {
         crate::dbus::DBusClient::pin_window(false);
         self.window.set_visible(false);
     }
+
+    /// Warm the window's rendering resources without showing it, so the first
+    /// real invocation is instant.
+    pub fn prewarm(&self) {
+        // Realize (create the surface + GL resources) without mapping, so no
+        // window flashes on screen at login while still cutting first-show cost.
+        gtk4::prelude::WidgetExt::realize(&self.window);
+    }
 }

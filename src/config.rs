@@ -37,6 +37,13 @@ pub struct AppConfig {
         help = "Close the window automatically after selecting an item"
     )]
     pub close_on_select: bool,
+
+    #[arg(
+        long = "prewarm",
+        default_value_t = false,
+        help = "Start resident in the background without showing the window (warms caches so the first invocation is instant)"
+    )]
+    pub prewarm: bool,
 }
 
 impl AppConfig {

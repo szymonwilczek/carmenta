@@ -109,7 +109,12 @@ impl CarmentaApp {
                 // holding the app so hiding the window won't quit the process.
                 HOLD.with(|h| *h.borrow_mut() = Some(app.hold()));
                 let win = CarmentaWindow::new(app, config);
-                win.show();
+                if config.prewarm {
+                    // Background autostart: warm resources, stay hidden.
+                    win.prewarm();
+                } else {
+                    win.show();
+                }
                 *cell = Some(win);
             }
         });

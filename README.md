@@ -117,11 +117,13 @@ Available options:
 - `--height <px>` - fixed window height, range: `320..=1400`
 - `--disable-gifs` - hides GIF tab (can improve performance and lower network usage)
 - `--close-on-select` - dismiss the window automatically after picking an item
+- `--prewarm` - start resident in the background without showing the window (warms render caches so the first invocation is instant)
 
 > Carmenta stays resident after first launch and hides instead of quitting, so
-> subsequent invocations re-show instantly. Runtime options (`--width`,
-> `--close-on-select`, …) are applied by the first launch; later invocations
-> just re-show the existing window.
+> subsequent invocations re-show instantly. The GNOME Shell extension launches
+> a `--prewarm` instance at login, so even the first pick is fast. Runtime
+> options (`--width`, `--close-on-select`, …) are applied by the first launch;
+> later invocations just re-show the existing window.
 
 Examples:
 
