@@ -30,6 +30,13 @@ pub struct AppConfig {
         help = "Hide GIF tab to reduce resource usage"
     )]
     pub disable_gifs: bool,
+
+    #[arg(
+        long = "close-on-select",
+        default_value_t = false,
+        help = "Close the window automatically after selecting an item"
+    )]
+    pub close_on_select: bool,
 }
 
 impl AppConfig {

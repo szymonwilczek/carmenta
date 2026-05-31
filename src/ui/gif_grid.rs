@@ -10,9 +10,9 @@ use std::rc::Rc;
 use std::time::SystemTime;
 
 // helper function: copy URL and insert via extension
-fn insert_gif_url(url: String) {
+fn insert_gif_url(url: String, close_after: bool) {
     crate::app::mark_inserting();
-    DBusClient::insert_or_copy(&url);
+    DBusClient::insert_or_copy(&url, close_after);
 }
 
 // helper to run async code on tokio runtime and return result to GTK main loop
@@ -86,7 +86,7 @@ pub fn create_gif_grid(search_entry: &gtk4::SearchEntry) -> Box {
             // url from widget name
             let url = btn.widget_name();
             if !url.is_empty() {
-                insert_gif_url(url.to_string());
+                insert_gif_url(url.to_string(), crate::close_on_select());
             }
         });
     });
@@ -307,6 +307,21 @@ pub fn create_gif_grid(search_entry: &gtk4::SearchEntry) -> Box {
             }
         }
     );
+
+    // Enter in the search box = select the first loaded GIF and close.
+    {
+        let selection_model = selection_model.clone();
+        super::on_search_enter(search_entry, &container, move || {
+            if let Some(obj) = selection_model.item(0) {
+                if let Ok(gif) = obj.downcast::<GifObject>() {
+                    let url = gif.full_url();
+                    if !url.is_empty() {
+                        insert_gif_url(url, true);
+                    }
+                }
+            }
+        });
+    }
 
     container
 }

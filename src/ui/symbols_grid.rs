@@ -6,7 +6,6 @@ use gtk4::{
 };
 use std::cell::RefCell;
 use std::rc::Rc;
-use crate::dbus::DBusClient;
 use super::symbols_data::{SymbolObject, SymbolCategory, get_symbols};
 
 pub fn create_symbols_grid(search_entry: &gtk4::SearchEntry) -> Box {
@@ -114,12 +113,7 @@ pub fn create_symbols_grid(search_entry: &gtk4::SearchEntry) -> Box {
          item.set_child(Some(&button));
          button.connect_clicked(move |btn| {
              let text = btn.label().unwrap_or_default().to_string();
-             
-             // History + Insertion Logic
-             crate::app::mark_inserting();
-             crate::history::add_recent(text.clone());
-             
-             DBusClient::insert_or_copy(&text);
+             super::insert_text(text, crate::close_on_select());
          });
     });
 
@@ -146,6 +140,13 @@ pub fn create_symbols_grid(search_entry: &gtk4::SearchEntry) -> Box {
         .build();
 
     container.append(&scrolled);
-    
+
+    // Enter in the search box = select the first visible item and close.
+    super::on_search_enter_commit::<SymbolObject, _>(
+        search_entry, &container, &selection_model,
+        &debounce_source, &current_query, &filter,
+        |o| o.char(),
+    );
+
     container
 }

@@ -21,7 +21,7 @@ impl DBusClient {
         }
     }
 
-    pub fn insert_or_copy(text: &str) {
+    pub fn insert_or_copy(text: &str, close_after: bool) {
         let text_owned = text.to_string();
         if let Some(rt) = crate::RUNTIME.get() {
             rt.spawn(async move {
@@ -30,9 +30,16 @@ impl DBusClient {
                     DBUS_TIMEOUT,
                     Self::try_insert_via_extension(&text_owned)
                 ).await;
-                
+
                 match result {
-                    Ok(Ok(_)) => {}, // success
+                    Ok(Ok(_)) => {
+                        // insert succeeded via extension; the fallback path
+                        // already quits on its own, so only handle the
+                        // close-after-select request here.
+                        if close_after {
+                            Self::quit_on_main();
+                        }
+                    },
                     Ok(Err(e)) => {
                         eprintln!("DBus error: {}", e);
                         Self::fallback_copy_and_quit(text_owned);
@@ -51,6 +58,17 @@ impl DBusClient {
     fn fallback_copy_and_quit(text: String) {
         gtk4::glib::MainContext::default().invoke(move || {
             Self::copy_to_clipboard(&text);
+            gtk4::glib::timeout_add_local_once(
+                Duration::from_millis(100),
+                || crate::app::request_default_quit()
+            );
+        });
+    }
+
+    // Quit shortly after a successful insert, leaving the paste (driven by the
+    // extension inside gnome-shell) enough time to settle.
+    fn quit_on_main() {
+        gtk4::glib::MainContext::default().invoke(|| {
             gtk4::glib::timeout_add_local_once(
                 Duration::from_millis(100),
                 || crate::app::request_default_quit()

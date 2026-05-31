@@ -5,17 +5,8 @@ use gtk4::{
     CustomFilter, FilterListModel, Popover
 };
 use super::emoji_data::{EmojiCategory, EmojiObject, get_all_emojis};
-use crate::dbus::DBusClient;
 use std::cell::RefCell;
 use std::rc::Rc;
-
-// helper function: Insert text & manage history/focus
-fn insert_helper(text: String) {
-     crate::app::mark_inserting();
-     crate::history::add_recent(text.clone());
-     
-     DBusClient::insert_or_copy(&text);
-}
 
 pub fn create_emoji_grid(search_entry: &gtk4::SearchEntry) -> Box {
     // Top container: Categories + Grid
@@ -195,7 +186,7 @@ pub fn create_emoji_grid(search_entry: &gtk4::SearchEntry) -> Box {
          // Left Click (Primary)
          button.connect_clicked(move |btn| {
              let text = btn.label().unwrap_or_default().to_string();
-             insert_helper(text);
+             super::insert_text(text, crate::close_on_select());
          });
 
          // Right Click (Secondary) - Skin Tones
@@ -230,7 +221,7 @@ pub fn create_emoji_grid(search_entry: &gtk4::SearchEntry) -> Box {
                          let v_text = variant.as_str().to_string();
                          let pop_clone = popover.clone();
                          v_btn.connect_clicked(move |_| {
-                             insert_helper(v_text.clone());
+                             super::insert_text(v_text.clone(), crate::close_on_select());
                              pop_clone.popdown();
                          });
                          container.append(&v_btn);
@@ -268,5 +259,13 @@ pub fn create_emoji_grid(search_entry: &gtk4::SearchEntry) -> Box {
         .build();
 
     container.append(&scrolled_window);
+
+    // Enter in the search box = select the first visible item and close.
+    super::on_search_enter_commit::<EmojiObject, _>(
+        search_entry, &container, &selection_model,
+        &debounce_source, &current_query, &filter,
+        |o| o.emoji(),
+    );
+
     container
 }
