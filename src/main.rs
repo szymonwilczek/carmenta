@@ -22,6 +22,12 @@ pub fn close_on_select() -> bool {
     CLOSE_ON_SELECT.get().copied().unwrap_or(false)
 }
 
+/// The HTTP client, built lazily on first network use. Keeping the (TLS-heavy)
+/// client off the startup path keeps emoji/kaomoji/symbol use network-free.
+pub fn client() -> &'static reqwest::Client {
+    CLIENT.get_or_init(reqwest::Client::new)
+}
+
 fn main() -> anyhow::Result<()> {
     let config = AppConfig::parse();
 
@@ -29,9 +35,6 @@ fn main() -> anyhow::Result<()> {
 
     let rt = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
     RUNTIME.set(rt).expect("Failed to set global runtime");
-    
-    let client = reqwest::Client::new();
-    CLIENT.set(client).expect("Failed to set global client");
 
     let app = CarmentaApp::new(APP_ID, config);
     app.run();

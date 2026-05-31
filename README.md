@@ -116,6 +116,12 @@ Available options:
 - `--width <px>` - fixed window width, range: `280..=1400`
 - `--height <px>` - fixed window height, range: `320..=1400`
 - `--disable-gifs` - hides GIF tab (can improve performance and lower network usage)
+- `--close-on-select` - dismiss the window automatically after picking an item
+
+> Carmenta stays resident after first launch and hides instead of quitting, so
+> subsequent invocations re-show instantly. Runtime options (`--width`,
+> `--close-on-select`, …) are applied by the first launch; later invocations
+> just re-show the existing window.
 
 Examples:
 

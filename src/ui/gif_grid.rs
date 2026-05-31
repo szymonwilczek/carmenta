@@ -110,16 +110,12 @@ pub fn create_gif_grid(search_entry: &gtk4::SearchEntry) -> Box {
         
         spawn_tokio(
             async move {
-                if let Some(client) = crate::CLIENT.get() {
-                    match client.get(&preview_url).send().await {
-                        Ok(response) => response.bytes().await.ok().map(|b| (b, gif_id)),
-                        Err(e) => {
-                            eprintln!("Failed to fetch GIF: {}", e);
-                            None
-                        }
+                match crate::client().get(&preview_url).send().await {
+                    Ok(response) => response.bytes().await.ok().map(|b| (b, gif_id)),
+                    Err(e) => {
+                        eprintln!("Failed to fetch GIF: {}", e);
+                        None
                     }
-                } else {
-                    None
                 }
             },
             move |result_opt| {
@@ -282,31 +278,42 @@ pub fn create_gif_grid(search_entry: &gtk4::SearchEntry) -> Box {
         }
     ));
 
-    // load trending GIFs on startup
-    let store_init = store.clone();
-    let spinner_init = spinner.clone();
-    spinner_init.set_visible(true);
-    spinner_init.set_spinning(true);
-    
-    spawn_tokio(
-        async move {
-            get_trending_gifs().await
-        },
-        move |results| {
-            spinner_init.set_spinning(false);
-            spinner_init.set_visible(false);
-            match results {
-                Ok(gif_data_list) => {
-                    for gif_data in gif_data_list {
-                        store_init.append(&GifObject::from_data(gif_data));
+    // Load trending GIFs lazily, the first time the GIF page is actually shown.
+    // This keeps the HTTP client (TLS init) and the network request off the
+    // startup path entirely when the user only wants an emoji/symbol.
+    let loaded = Rc::new(RefCell::new(false));
+    container.connect_map(glib::clone!(
+        #[strong] store,
+        #[weak] spinner,
+        #[strong] loaded,
+        move |_| {
+            if *loaded.borrow() {
+                return;
+            }
+            *loaded.borrow_mut() = true;
+
+            spinner.set_visible(true);
+            spinner.set_spinning(true);
+            let store_init = store.clone();
+            spawn_tokio(
+                async move { get_trending_gifs().await },
+                move |results| {
+                    spinner.set_spinning(false);
+                    spinner.set_visible(false);
+                    match results {
+                        Ok(gif_data_list) => {
+                            for gif_data in gif_data_list {
+                                store_init.append(&GifObject::from_data(gif_data));
+                            }
+                        }
+                        Err(e) => {
+                            eprintln!("Failed to load trending GIFs: {}", e);
+                        }
                     }
                 }
-                Err(e) => {
-                    eprintln!("Failed to load trending GIFs: {}", e);
-                }
-            }
+            );
         }
-    );
+    ));
 
     // Enter in the search box = select the first loaded GIF and close.
     {

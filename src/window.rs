@@ -8,6 +8,7 @@ use std::rc::Rc;
 
 pub struct CarmentaWindow {
     pub window: ApplicationWindow,
+    search_entry: SearchEntry,
 }
 
 impl CarmentaWindow {
@@ -112,19 +113,17 @@ impl CarmentaWindow {
             .build();
 
         // pin window to stay on top - but wait for window to be mapped!
-        let win_weak_pin = window.downgrade();
         window.connect_map(move |_| {
-            if let Some(_) = win_weak_pin.upgrade() {
-                crate::dbus::DBusClient::pin_window(true);
-            }
+            crate::dbus::DBusClient::pin_window(true);
         });
 
+        // Closing the window dismisses the picker but keeps the process
+        // resident: unpin, hide, and stop the default destroy so re-invocation
+        // re-shows this same warm window.
         window.connect_close_request(move |win| {
             crate::dbus::DBusClient::pin_window(false);
-            if let Some(app) = win.application() {
-                crate::app::request_quit(&app);
-            }
-            glib::Propagation::Proceed
+            win.set_visible(false);
+            glib::Propagation::Stop
         });
 
         let focus_loss_checker: Rc<RefCell<Option<glib::SourceId>>> = Rc::new(RefCell::new(None));
@@ -162,10 +161,8 @@ impl CarmentaWindow {
                             return glib::ControlFlow::Continue;
                         }
 
-                        println!("Focus lost confirmed -> Closing App");
-                        if let Some(app) = w.application() {
-                            crate::app::request_quit(&app);
-                        }
+                        // Focus lost: dismiss (hide), keep process resident.
+                        crate::app::hide_default();
                         *focus_loss_checker_for_timer.borrow_mut() = None;
                         glib::ControlFlow::Break
                     });
@@ -174,25 +171,32 @@ impl CarmentaWindow {
             }
         ));
 
-        // Escape Key handler
+        // Escape dismisses the picker (hide, stay resident).
         let key_controller = gtk4::EventControllerKey::new();
         key_controller.set_propagation_phase(gtk4::PropagationPhase::Capture);
-        let app_weak_key = app.downgrade();
         key_controller.connect_key_pressed(move |_, key, _, _| {
             if key == gtk4::gdk::Key::Escape {
-                if let Some(a) = app_weak_key.upgrade() {
-                    crate::app::request_quit(a.upcast_ref());
-                }
+                crate::app::hide_default();
                 return glib::Propagation::Stop;
             }
             glib::Propagation::Proceed
         });
         window.add_controller(key_controller);
 
-        Self { window }
+        Self { window, search_entry }
     }
 
-    pub fn present(&self) {
+    /// Show (or re-show) the picker: present, clear any previous query, and
+    /// focus the search box so the user can type immediately.
+    pub fn show(&self) {
         self.window.present();
+        self.search_entry.set_text("");
+        self.search_entry.grab_focus();
+    }
+
+    /// Dismiss the picker without destroying it (keeps the process resident).
+    pub fn hide(&self) {
+        crate::dbus::DBusClient::pin_window(false);
+        self.window.set_visible(false);
     }
 }

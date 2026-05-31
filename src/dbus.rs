@@ -60,18 +60,18 @@ impl DBusClient {
             Self::copy_to_clipboard(&text);
             gtk4::glib::timeout_add_local_once(
                 Duration::from_millis(100),
-                || crate::app::request_default_quit()
+                || crate::app::hide_default()
             );
         });
     }
 
-    // Quit shortly after a successful insert, leaving the paste (driven by the
+    // Hide shortly after a successful insert, leaving the paste (driven by the
     // extension inside gnome-shell) enough time to settle.
     fn quit_on_main() {
         gtk4::glib::MainContext::default().invoke(|| {
             gtk4::glib::timeout_add_local_once(
                 Duration::from_millis(100),
-                || crate::app::request_default_quit()
+                || crate::app::hide_default()
             );
         });
     }

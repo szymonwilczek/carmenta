@@ -256,6 +256,38 @@ export default class CarmentaExtension extends Extension {
   }
 
   _spawnApp() {
+    const appBusName = "io.github.szymonwilczek.carmenta";
+    const appObjectPath = "/io/github/szymonwilczek/carmenta";
+
+    // If a resident Carmenta is already running it owns its application bus
+    // name and exports org.gtk.Application. Activating it directly avoids
+    // spawning a whole new process (~exec + dynamic linking), so the picker
+    // appears near-instantly. Fall back to launching the binary otherwise.
+    Gio.DBus.session.call(
+      appBusName,
+      appObjectPath,
+      "org.gtk.Application",
+      "Activate",
+      new GLib.Variant("(a{sv})", [{}]),
+      null,
+      Gio.DBusCallFlags.NONE,
+      300,
+      null,
+      (connection, res) => {
+        try {
+          connection.call_finish(res);
+          console.log("Carmenta: Activated resident instance via D-Bus");
+        } catch (e) {
+          console.log(
+            `Carmenta: No resident instance (${e.message}); spawning new process`,
+          );
+          this._spawnNewProcess();
+        }
+      },
+    );
+  }
+
+  _spawnNewProcess() {
     try {
       console.log("Carmenta: Launching app via keybinding");
       const launcher = new Gio.SubprocessLauncher({

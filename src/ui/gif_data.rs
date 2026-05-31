@@ -149,8 +149,7 @@ pub async fn search_gifs(query: &str) -> Result<Vec<GifData>, reqwest::Error> {
         urlencoding::encode(query)
     );
 
-    let client = crate::CLIENT.get().expect("HTTP client not initialized");
-    let response: KlipyApiResponse = client.get(&url).send().await?.json().await?;
+    let response: KlipyApiResponse = crate::client().get(&url).send().await?.json().await?;
 
     let gifs = response.data.data
         .into_iter()
@@ -166,8 +165,7 @@ pub async fn get_trending_gifs() -> Result<Vec<GifData>, reqwest::Error> {
         get_api_key()
     );
 
-    let client = crate::CLIENT.get().expect("HTTP client not initialized");
-    let response: KlipyApiResponse = client.get(&url).send().await?.json().await?;
+    let response: KlipyApiResponse = crate::client().get(&url).send().await?.json().await?;
 
     let gifs = response.data.data
         .into_iter()
