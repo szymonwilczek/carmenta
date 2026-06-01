@@ -1,10 +1,10 @@
+use super::gif_data::{get_trending_gifs, search_gifs, GifObject};
+use crate::dbus::DBusClient;
 use gtk4::prelude::*;
 use gtk4::{
-    gio, glib, GridView, SignalListItemFactory, SingleSelection,
-    PolicyType, ScrolledWindow, Box, Orientation, Spinner
+    gio, glib, Box, GridView, Orientation, PolicyType, ScrolledWindow, SignalListItemFactory,
+    SingleSelection, Spinner,
 };
-use super::gif_data::{GifObject, search_gifs, get_trending_gifs};
-use crate::dbus::DBusClient;
 use std::cell::RefCell;
 use std::rc::Rc;
 use std::time::SystemTime;
@@ -22,17 +22,17 @@ where
     T: Send + 'static,
 {
     let (tx, rx) = std::sync::mpsc::channel();
-    
+
     if let Some(rt) = crate::RUNTIME.get() {
         rt.spawn(async move {
             let result = future.await;
             let _ = tx.send(result);
         });
     }
-    
+
     // cell to allow moving FnOnce out of the closure
     let callback = std::cell::Cell::new(Some(callback));
-    
+
     // poll for result on GTK main loop
     glib::timeout_add_local(std::time::Duration::from_millis(50), move || {
         match rx.try_recv() {
@@ -59,15 +59,15 @@ pub fn create_gif_grid(search_entry: &gtk4::SearchEntry) -> Box {
         .valign(gtk4::Align::Center)
         .width_request(32)
         .height_request(32)
-        .visible(false)  // shown only during loading
+        .visible(false) // shown only during loading
         .build();
-    
+
     container.append(&spinner);
 
     let store = gio::ListStore::new::<GifObject>();
     let selection_model = SingleSelection::new(Some(store.clone()));
     let factory = SignalListItemFactory::new();
-    
+
     factory.connect_setup(move |_factory, item| {
         let button = gtk4::Button::builder()
             .css_classes(["gif-btn", "flat"])
@@ -77,7 +77,7 @@ pub fn create_gif_grid(search_entry: &gtk4::SearchEntry) -> Box {
             .width_request(100)
             .height_request(100)
             .build();
-        
+
         button.set_child(Some(&picture));
         item.set_child(Some(&button));
 
@@ -107,7 +107,7 @@ pub fn create_gif_grid(search_entry: &gtk4::SearchEntry) -> Box {
         // load GIF asynchronously
         let picture_weak = picture.downgrade();
         let full_url_check = full_url.clone();
-        
+
         spawn_tokio(
             async move {
                 match crate::client().get(&preview_url).send().await {
@@ -122,19 +122,19 @@ pub fn create_gif_grid(search_entry: &gtk4::SearchEntry) -> Box {
                 if let Some((bytes, _id)) = result_opt {
                     if let Some(pic) = picture_weak.upgrade() {
                         if let Some(parent) = pic.parent() {
-                             if let Ok(btn) = parent.downcast::<gtk4::Button>() {
-                                 if btn.widget_name() != full_url_check {
-                                     // widget reused for another item, discard result
-                                     return;
-                                 }
+                            if let Ok(btn) = parent.downcast::<gtk4::Button>() {
+                                if btn.widget_name() != full_url_check {
+                                    // widget reused for another item, discard result
+                                    return;
+                                }
 
-                                 // check if widget is still in the component tree
-                                 if pic.root().is_none() {
-                                     return;
-                                 }
-                             } else {
-                                 return;
-                             }
+                                // check if widget is still in the component tree
+                                if pic.root().is_none() {
+                                    return;
+                                }
+                            } else {
+                                return;
+                            }
                         } else {
                             return;
                         }
@@ -142,33 +142,40 @@ pub fn create_gif_grid(search_entry: &gtk4::SearchEntry) -> Box {
                         // Use PixbufAnimation to drive the animation manually.
                         // This avoids GStreamer pipelines entirely while keeping the animation.
                         let stream = gio::MemoryInputStream::from_bytes(&glib::Bytes::from(&bytes));
-                        if let Ok(anim) = gdk_pixbuf::PixbufAnimation::from_stream(&stream, None::<&gio::Cancellable>) {
+                        if let Ok(anim) = gdk_pixbuf::PixbufAnimation::from_stream(
+                            &stream,
+                            None::<&gio::Cancellable>,
+                        ) {
                             let iter = anim.iter(None);
-                            
+
                             // drive the first frame
                             let pixbuf = iter.pixbuf();
                             let texture = gtk4::gdk::Texture::for_pixbuf(&pixbuf);
                             pic.set_paintable(Some(&texture));
-                            
+
                             // advance animation on GTK main loop with per-frame delay
-                            let initial_delay = iter.delay_time().map(|d| d.as_millis()).unwrap_or(100);
+                            let initial_delay =
+                                iter.delay_time().map(|d| d.as_millis()).unwrap_or(100);
                             let pic_weak_loop = pic.downgrade();
-                            glib::timeout_add_local(std::time::Duration::from_millis(initial_delay as u64), move || {
-                                if let Some(p) = pic_weak_loop.upgrade() {
-                                    if p.paintable().is_some() {
-                                        iter.advance(SystemTime::now());
-                                        let pixbuf = iter.pixbuf();
-                                        let texture = gtk4::gdk::Texture::for_pixbuf(&pixbuf);
-                                        p.set_paintable(Some(&texture));
-                                        return glib::ControlFlow::Continue;
+                            glib::timeout_add_local(
+                                std::time::Duration::from_millis(initial_delay as u64),
+                                move || {
+                                    if let Some(p) = pic_weak_loop.upgrade() {
+                                        if p.paintable().is_some() {
+                                            iter.advance(SystemTime::now());
+                                            let pixbuf = iter.pixbuf();
+                                            let texture = gtk4::gdk::Texture::for_pixbuf(&pixbuf);
+                                            p.set_paintable(Some(&texture));
+                                            return glib::ControlFlow::Continue;
+                                        }
                                     }
-                                }
-                                glib::ControlFlow::Break
-                            });
+                                    glib::ControlFlow::Break
+                                },
+                            );
                         }
                     }
                 }
-            }
+            },
         );
     });
 
@@ -208,13 +215,22 @@ pub fn create_gif_grid(search_entry: &gtk4::SearchEntry) -> Box {
 
     // search with debounce (300ms)
     let debounce_source: Rc<RefCell<Option<glib::SourceId>>> = Rc::new(RefCell::new(None));
+    let search_pending = Rc::new(RefCell::new(false));
+    let loaded_query: Rc<RefCell<Option<String>>> = Rc::new(RefCell::new(None));
     let store_weak = store.downgrade();
     let spinner_weak = spinner.downgrade();
-    
+
     search_entry.connect_search_changed(glib::clone!(
-        #[strong] debounce_source,
-        #[strong] store_weak,
-        #[strong] spinner_weak,
+        #[strong]
+        debounce_source,
+        #[strong]
+        search_pending,
+        #[strong]
+        loaded_query,
+        #[strong]
+        store_weak,
+        #[strong]
+        spinner_weak,
         move |entry| {
             // cancel previous debounce timer
             if let Some(source_id) = debounce_source.borrow_mut().take() {
@@ -224,39 +240,43 @@ pub fn create_gif_grid(search_entry: &gtk4::SearchEntry) -> Box {
             }
 
             let query = entry.text().to_string();
+            *search_pending.borrow_mut() = true;
             let store_weak_clone = store_weak.clone();
             let spinner_weak_clone = spinner_weak.clone();
             let debounce_source_clone = debounce_source.clone();
+            let search_pending_clone = search_pending.clone();
+            let loaded_query_clone = loaded_query.clone();
 
             // start debounce timer
-            let source_id = glib::timeout_add_local_once(
-                std::time::Duration::from_millis(300),
-                move || {
+            let source_id =
+                glib::timeout_add_local_once(std::time::Duration::from_millis(300), move || {
                     *debounce_source_clone.borrow_mut() = None;
-                    
+
                     if let Some(spinner) = spinner_weak_clone.upgrade() {
                         spinner.set_visible(true);
                         spinner.set_spinning(true);
                     }
-                    
+
                     let store_weak_final = store_weak_clone.clone();
                     let spinner_weak_final = spinner_weak_clone.clone();
-                    let query_clone = query.clone();
-                    
+                    let query_for_request = query.clone();
+                    let query_for_result = query.clone();
+
                     spawn_tokio(
                         async move {
-                            if query_clone.is_empty() {
+                            if query_for_request.is_empty() {
                                 get_trending_gifs().await
                             } else {
-                                search_gifs(&query_clone).await
+                                search_gifs(&query_for_request).await
                             }
                         },
                         move |results| {
+                            *search_pending_clone.borrow_mut() = false;
                             if let Some(spinner) = spinner_weak_final.upgrade() {
                                 spinner.set_spinning(false);
                                 spinner.set_visible(false);
                             }
-                            
+
                             if let Some(store) = store_weak_final.upgrade() {
                                 match results {
                                     Ok(gif_data_list) => {
@@ -264,16 +284,16 @@ pub fn create_gif_grid(search_entry: &gtk4::SearchEntry) -> Box {
                                         for gif_data in gif_data_list {
                                             store.append(&GifObject::from_data(gif_data));
                                         }
+                                        *loaded_query_clone.borrow_mut() = Some(query_for_result);
                                     }
                                     Err(e) => {
                                         eprintln!("GIF search error: {}", e);
                                     }
                                 }
                             }
-                        }
+                        },
                     );
-                }
-            );
+                });
             *debounce_source.borrow_mut() = Some(source_id);
         }
     ));
@@ -283,42 +303,64 @@ pub fn create_gif_grid(search_entry: &gtk4::SearchEntry) -> Box {
     // startup path entirely when the user only wants an emoji/symbol.
     let loaded = Rc::new(RefCell::new(false));
     container.connect_map(glib::clone!(
-        #[strong] store,
-        #[weak] spinner,
-        #[strong] loaded,
+        #[strong]
+        store,
+        #[strong]
+        search_entry,
+        #[weak]
+        spinner,
+        #[strong]
+        loaded,
+        #[strong]
+        search_pending,
+        #[strong]
+        loaded_query,
         move |_| {
             if *loaded.borrow() {
                 return;
             }
+            if !search_entry.text().is_empty() {
+                return;
+            }
             *loaded.borrow_mut() = true;
 
+            *search_pending.borrow_mut() = true;
             spinner.set_visible(true);
             spinner.set_spinning(true);
             let store_init = store.clone();
-            spawn_tokio(
-                async move { get_trending_gifs().await },
-                move |results| {
-                    spinner.set_spinning(false);
-                    spinner.set_visible(false);
-                    match results {
-                        Ok(gif_data_list) => {
-                            for gif_data in gif_data_list {
-                                store_init.append(&GifObject::from_data(gif_data));
-                            }
+            let search_pending_done = search_pending.clone();
+            let loaded_query_done = loaded_query.clone();
+            spawn_tokio(async move { get_trending_gifs().await }, move |results| {
+                *search_pending_done.borrow_mut() = false;
+                spinner.set_spinning(false);
+                spinner.set_visible(false);
+                match results {
+                    Ok(gif_data_list) => {
+                        for gif_data in gif_data_list {
+                            store_init.append(&GifObject::from_data(gif_data));
                         }
-                        Err(e) => {
-                            eprintln!("Failed to load trending GIFs: {}", e);
-                        }
+                        *loaded_query_done.borrow_mut() = Some(String::new());
+                    }
+                    Err(e) => {
+                        eprintln!("Failed to load trending GIFs: {}", e);
                     }
                 }
-            );
+            });
         }
     ));
 
     // Enter in the search box = select the first loaded GIF and close.
     {
         let selection_model = selection_model.clone();
+        let entry = search_entry.clone();
+        let search_pending = search_pending.clone();
+        let loaded_query = loaded_query.clone();
         super::on_search_enter(search_entry, &container, move || {
+            let query = entry.text().to_string();
+            if *search_pending.borrow() || loaded_query.borrow().as_deref() != Some(query.as_str())
+            {
+                return;
+            }
             if let Some(obj) = selection_model.item(0) {
                 if let Ok(gif) = obj.downcast::<GifObject>() {
                     let url = gif.full_url();

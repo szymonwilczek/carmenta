@@ -1,10 +1,13 @@
 use crate::config::AppConfig;
 use crate::window::CarmentaWindow;
+use clap::Parser;
+use gtk4::gio;
 use gtk4::glib;
 use gtk4::prelude::*;
 use gtk4::Application as GtkApplication;
 use libadwaita::Application;
 use std::cell::RefCell;
+use std::rc::Rc;
 
 // Global state to track insertion
 thread_local! {
@@ -19,6 +22,7 @@ thread_local! {
     // Taken only by the primary instance on its first activation, so remote
     // (forwarding) invocations don't hold and exit normally.
     static HOLD: RefCell<Option<gtk4::gio::ApplicationHoldGuard>> = RefCell::new(None);
+    static WINDOW_CONFIG: RefCell<Option<AppConfig>> = RefCell::new(None);
 }
 
 pub fn mark_inserting() {
@@ -81,29 +85,71 @@ pub struct CarmentaApp {
 
 impl CarmentaApp {
     pub fn new(app_id: &str, config: AppConfig) -> Self {
-        let app = Application::builder().application_id(app_id).build();
+        let app = Application::builder()
+            .application_id(app_id)
+            .flags(gio::ApplicationFlags::HANDLES_COMMAND_LINE)
+            .build();
 
-        app.connect_activate(move |app| Self::on_activate(app, &config));
+        let config = Rc::new(RefCell::new(config));
+
+        app.connect_activate({
+            let config = config.clone();
+            move |app| Self::on_activate(app, &config.borrow())
+        });
+
+        app.connect_command_line(move |app, command_line| {
+            let args = command_line.arguments();
+            match AppConfig::try_parse_from(args) {
+                Ok(parsed) => {
+                    *config.borrow_mut() = parsed.clone();
+                    Self::on_activate(app, &parsed);
+                    0
+                }
+                Err(err) => {
+                    eprint!("{err}");
+                    err.exit_code()
+                }
+            }
+        });
 
         Self { app }
     }
 
     pub fn run(&self) {
-        let argv0 = std::env::args()
-            .next()
-            .unwrap_or_else(|| "carmenta".to_string());
-        self.app.run_with_args(&[argv0]);
+        let args = std::env::args().collect::<Vec<_>>();
+        self.app.run_with_args(&args);
     }
 
     fn on_activate(app: &Application, config: &AppConfig) {
+        crate::set_close_on_select(config.close_on_select);
+
         // prefetching DBus connection to avoid flicker on first insert
         crate::dbus::DBusClient::init_connection();
 
         WINDOW.with(|cell| {
             let mut cell = cell.borrow_mut();
+            let should_rebuild = WINDOW_CONFIG.with(|stored| {
+                stored
+                    .borrow()
+                    .as_ref()
+                    .map(|old| old.gifs_enabled() != config.gifs_enabled())
+                    .unwrap_or(false)
+            });
+
+            if should_rebuild {
+                if let Some(win) = cell.take() {
+                    win.destroy();
+                }
+            }
+
             if let Some(win) = cell.as_ref() {
                 // Resident instance re-invoked: just re-show the warm window.
-                win.show();
+                win.apply_config(config);
+                if config.prewarm {
+                    win.prewarm();
+                } else {
+                    win.show();
+                }
             } else {
                 // First activation in the primary instance: become resident by
                 // holding the app so hiding the window won't quit the process.
@@ -118,5 +164,7 @@ impl CarmentaApp {
                 *cell = Some(win);
             }
         });
+
+        WINDOW_CONFIG.with(|stored| *stored.borrow_mut() = Some(config.clone()));
     }
 }

@@ -5,10 +5,9 @@ use std::cell::RefCell;
 
 // to avoid plaintext in repo
 const KLIPY_KEY_BYTES: [u8; 64] = [
-    83, 67, 68, 110, 88, 102, 103, 90, 66, 98, 108, 76, 78, 79, 117, 117, 
-    66, 112, 88, 115, 119, 68, 108, 78, 86, 97, 113, 83, 102, 89, 106, 82, 
-    73, 73, 119, 76, 55, 104, 105, 77, 83, 51, 106, 86, 89, 65, 83, 101, 
-    112, 108, 77, 120, 78, 68, 52, 77, 48, 100, 78, 77, 57, 81, 51, 118
+    83, 67, 68, 110, 88, 102, 103, 90, 66, 98, 108, 76, 78, 79, 117, 117, 66, 112, 88, 115, 119,
+    68, 108, 78, 86, 97, 113, 83, 102, 89, 106, 82, 73, 73, 119, 76, 55, 104, 105, 77, 83, 51, 106,
+    86, 89, 65, 83, 101, 112, 108, 77, 120, 78, 68, 52, 77, 48, 100, 78, 77, 57, 81, 51, 118,
 ];
 
 fn get_api_key() -> String {
@@ -118,7 +117,9 @@ impl GifObject {
 // helper to extract URLs from Klipy file formats
 fn extract_gif_data(gif: KlipyGif) -> Option<GifData> {
     // prefer small for faster loading
-    let preview_url = gif.file.sm
+    let preview_url = gif
+        .file
+        .sm
         .as_ref()
         .and_then(|q| q.gif.as_ref())
         .or_else(|| gif.file.md.as_ref().and_then(|q| q.gif.as_ref()))
@@ -127,7 +128,9 @@ fn extract_gif_data(gif: KlipyGif) -> Option<GifData> {
         .clone();
 
     // prefer HD for copying
-    let full_url = gif.file.hd
+    let full_url = gif
+        .file
+        .hd
         .as_ref()
         .and_then(|q| q.gif.as_ref())
         .or_else(|| gif.file.md.as_ref().and_then(|q| q.gif.as_ref()))?
@@ -151,7 +154,9 @@ pub async fn search_gifs(query: &str) -> Result<Vec<GifData>, reqwest::Error> {
 
     let response: KlipyApiResponse = crate::client().get(&url).send().await?.json().await?;
 
-    let gifs = response.data.data
+    let gifs = response
+        .data
+        .data
         .into_iter()
         .filter_map(extract_gif_data)
         .collect();
@@ -167,7 +172,9 @@ pub async fn get_trending_gifs() -> Result<Vec<GifData>, reqwest::Error> {
 
     let response: KlipyApiResponse = crate::client().get(&url).send().await?.json().await?;
 
-    let gifs = response.data.data
+    let gifs = response
+        .data
+        .data
         .into_iter()
         .filter_map(extract_gif_data)
         .collect();

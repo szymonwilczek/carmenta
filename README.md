@@ -101,7 +101,7 @@ Obviously, if you want to do that steps yourself, that's fine and will work the 
 - Launch Carmenta (can be binded to any **Custom Shortcut** as `carmenta`).
 - Type to search (or use Arrows and/or Tab/Ctrl-Tab to navigate around the app).
 - Click to copy & insert.
-- **Esc** to quit instantly.
+- **Esc** to dismiss the picker; use **Quit** from the menu to exit the resident process.
 
 ### CLI options
 
@@ -122,8 +122,8 @@ Available options:
 > Carmenta stays resident after first launch and hides instead of quitting, so
 > subsequent invocations re-show instantly. The GNOME Shell extension launches
 > a `--prewarm` instance at login, so even the first pick is fast. Runtime
-> options (`--width`, `--close-on-select`, …) are applied by the first launch;
-> later invocations just re-show the existing window.
+> options (`--width`, `--close-on-select`, …) are applied on each CLI
+> invocation and update the resident window before it is shown.
 
 Examples:
 

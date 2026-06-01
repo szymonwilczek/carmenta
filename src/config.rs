@@ -5,7 +5,7 @@ const MAX_WINDOW_WIDTH: i64 = 1400;
 const MIN_WINDOW_HEIGHT: i64 = 320;
 const MAX_WINDOW_HEIGHT: i64 = 1400;
 
-#[derive(Debug, Clone, Parser)]
+#[derive(Debug, Clone, Parser, PartialEq, Eq)]
 #[command(name = "carmenta", about = "Fast emoji picker for Linux", version)]
 pub struct AppConfig {
     #[arg(

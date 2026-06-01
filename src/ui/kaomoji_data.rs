@@ -30,7 +30,12 @@ glib::wrapper! {
 }
 
 impl KaomojiObject {
-    pub fn new(text: String, name: String, category: KaomojiCategory, keywords: Vec<String>) -> Self {
+    pub fn new(
+        text: String,
+        name: String,
+        category: KaomojiCategory,
+        keywords: Vec<String>,
+    ) -> Self {
         let obj: Self = glib::Object::builder().build();
         *obj.imp().text.borrow_mut() = text;
         *obj.imp().name.borrow_mut() = name;
@@ -42,7 +47,7 @@ impl KaomojiObject {
     pub fn text(&self) -> String {
         self.imp().text.borrow().clone()
     }
-    
+
     pub fn name(&self) -> String {
         self.imp().name.borrow().clone()
     }
@@ -76,29 +81,24 @@ pub fn get_all_kaomojis() -> Vec<KaomojiObject> {
         ("ヽ(・∀・)ﾉ", "Excited", KaomojiCategory::Joy),
         ("٩(◕‿◕｡)۶", "Cheer", KaomojiCategory::Joy),
         ("(o･ω･o)", "Bear shape", KaomojiCategory::Joy),
-        
         // LOVE
         ("(♡˙︶˙♡)", "Love", KaomojiCategory::Love),
         ("( ˘ ³˘)♥", "Kiss", KaomojiCategory::Love),
         ("(´,,•ω•,,)♡", "Shy Love", KaomojiCategory::Love),
         ("❤ (ɔˆз(ˆ⌣ˆc)", "Hug", KaomojiCategory::Love),
-        
         // EMBARRASSMENT
         ("(⁄ ⁄•⁄ω⁄•⁄ ⁄)", "Blush", KaomojiCategory::Embarrassment),
         ("(*/_＼)", "Hide", KaomojiCategory::Embarrassment),
         ("(◡‿◡ *)", "Shy", KaomojiCategory::Embarrassment),
-        
         // ANGER
         ("(＃`Д´)", "Angry", KaomojiCategory::Anger),
         ("( ` ε ´ )", "Pout", KaomojiCategory::Anger),
         ("(╬ Ò﹏Ó)", "Rage", KaomojiCategory::Anger),
         ("凸(￣ヘ￣)", "Middle Finger", KaomojiCategory::Anger),
-        
         // SORROW
         ("(╥_╥)", "Crying", KaomojiCategory::Sorrow),
         ("( o_-) /", "Comfort", KaomojiCategory::Sorrow),
         ("(｡•́︿•̀｡)", "Sad", KaomojiCategory::Sorrow),
-        
         // ACTIONS / MEMES
         ("(╯°□°)╯︵ ┻━┻", "Table Flip", KaomojiCategory::Actions),
         ("(ノಠ益ಠ)ノ彡┻━┻", "Angry Flip", KaomojiCategory::Actions),
@@ -109,7 +109,14 @@ pub fn get_all_kaomojis() -> Vec<KaomojiObject> {
         ("uwu", "UWU", KaomojiCategory::Actions),
     ];
 
-    raw.into_iter().map(|(txt, name, cat)| {
-        KaomojiObject::new(txt.to_string(), name.to_string(), cat, vec![name.to_lowercase()])
-    }).collect()
+    raw.into_iter()
+        .map(|(txt, name, cat)| {
+            KaomojiObject::new(
+                txt.to_string(),
+                name.to_string(),
+                cat,
+                vec![name.to_lowercase()],
+            )
+        })
+        .collect()
 }

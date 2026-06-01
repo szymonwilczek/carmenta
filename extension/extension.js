@@ -260,7 +260,7 @@ export default class CarmentaExtension extends Extension {
   }
 
   _spawnApp() {
-    const appBusName = "io.github.szymonwilczek.carmenta";
+    const appBusName = this._appId;
     const appObjectPath = "/io/github/szymonwilczek/carmenta";
 
     // If a resident Carmenta is already running it owns its application bus
@@ -292,7 +292,7 @@ export default class CarmentaExtension extends Extension {
   }
 
   _prewarmApp() {
-    const appBusName = "io.github.szymonwilczek.carmenta";
+    const appBusName = this._appId;
     // Only launch a pre-warm instance if Carmenta isn't already running.
     // Launching one while a resident exists would forward an "activate" and
     // pop the window onto the screen at login.
@@ -364,7 +364,7 @@ export default class CarmentaExtension extends Extension {
             flags:
               Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_PIPE,
           });
-          flatpakLauncher.spawnv(["flatpak", "run", "org.carmenta.App", ...extraArgs]);
+          flatpakLauncher.spawnv(["flatpak", "run", this._appId, ...extraArgs]);
           log("[Carmenta] Launched via Flatpak");
           return; // exit if successful
         } catch (e) {

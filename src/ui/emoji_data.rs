@@ -44,9 +44,14 @@ glib::wrapper! {
 }
 
 impl EmojiObject {
-    pub fn new(emoji: String, name: String, category: imp::EmojiCategory, keywords: Vec<String>) -> Self {
+    pub fn new(
+        emoji: String,
+        name: String,
+        category: imp::EmojiCategory,
+        keywords: Vec<String>,
+    ) -> Self {
         let obj = glib::Object::builder::<Self>().build();
-        
+
         let name_lower = name.to_lowercase();
         let keywords_lower = keywords.iter().map(|k| k.to_lowercase()).collect();
 
@@ -66,12 +71,12 @@ impl EmojiObject {
     pub fn name(&self) -> String {
         self.imp().name.borrow().clone()
     }
-    
+
     // Optimized accessor
     pub fn name_lower(&self) -> String {
         self.imp().name_lower.borrow().clone()
     }
-    
+
     pub fn category(&self) -> imp::EmojiCategory {
         *self.imp().category.borrow()
     }
@@ -79,7 +84,7 @@ impl EmojiObject {
     pub fn keywords(&self) -> Vec<String> {
         self.imp().keywords.borrow().clone()
     }
-    
+
     // Optimized accessor
     pub fn keywords_lower(&self) -> Vec<String> {
         self.imp().keywords_lower.borrow().clone()
@@ -90,8 +95,8 @@ pub use imp::EmojiCategory;
 
 pub fn get_all_emojis() -> Vec<EmojiObject> {
     use emojis::Group;
-    let mut grid_items = Vec::new(); 
-    
+    let mut grid_items = Vec::new();
+
     for emoji in emojis::iter() {
         let group = emoji.group();
         let category = match group {
@@ -116,7 +121,7 @@ pub fn get_all_emojis() -> Vec<EmojiObject> {
             emoji.as_str().to_string(),
             name,
             category,
-            keywords
+            keywords,
         ));
     }
     grid_items

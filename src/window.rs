@@ -2,13 +2,14 @@ use crate::config::AppConfig;
 use gtk4::glib;
 use gtk4::prelude::*;
 use gtk4::{gio, Box, Orientation, SearchEntry};
-use libadwaita::{Application, ApplicationWindow};
+use libadwaita::{Application, ApplicationWindow, ViewStack};
 use std::cell::RefCell;
 use std::rc::Rc;
 
 pub struct CarmentaWindow {
     pub window: ApplicationWindow,
     search_entry: SearchEntry,
+    stack: ViewStack,
 }
 
 impl CarmentaWindow {
@@ -183,12 +184,21 @@ impl CarmentaWindow {
         });
         window.add_controller(key_controller);
 
-        Self { window, search_entry }
+        Self {
+            window,
+            search_entry,
+            stack,
+        }
+    }
+
+    pub fn apply_config(&self, config: &AppConfig) {
+        self.window.set_default_size(config.width, config.height);
     }
 
     /// Show (or re-show) the picker: present, clear any previous query, and
     /// focus the search box so the user can type immediately.
     pub fn show(&self) {
+        self.stack.set_visible_child_name("emoji");
         self.window.present();
         self.search_entry.set_text("");
         self.search_entry.grab_focus();
@@ -198,6 +208,11 @@ impl CarmentaWindow {
     pub fn hide(&self) {
         crate::dbus::DBusClient::pin_window(false);
         self.window.set_visible(false);
+    }
+
+    pub fn destroy(self) {
+        crate::dbus::DBusClient::pin_window(false);
+        self.window.destroy();
     }
 
     /// Warm the window's rendering resources without showing it, so the first
