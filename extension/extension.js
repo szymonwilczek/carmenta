@@ -51,6 +51,10 @@ export default class CarmentaExtension extends Extension {
         "Carmenta Virtual Keyboard",
       );
 
+    // Pre-warm a hidden, resident instance so the first real invocation is
+    // instant. Only if one isn't already running (so we never pop the window).
+    this._prewarmApp();
+
     console.log("Carmenta: Extension enabled");
   }
 
@@ -256,15 +260,77 @@ export default class CarmentaExtension extends Extension {
   }
 
   _spawnApp() {
+    const appBusName = this._appId;
+    const appObjectPath = "/io/github/szymonwilczek/carmenta";
+
+    // If a resident Carmenta is already running it owns its application bus
+    // name and exports org.gtk.Application. Activating it directly avoids
+    // spawning a whole new process (~exec + dynamic linking), so the picker
+    // appears near-instantly. Fall back to launching the binary otherwise.
+    Gio.DBus.session.call(
+      appBusName,
+      appObjectPath,
+      "org.gtk.Application",
+      "Activate",
+      new GLib.Variant("(a{sv})", [{}]),
+      null,
+      Gio.DBusCallFlags.NONE,
+      300,
+      null,
+      (connection, res) => {
+        try {
+          connection.call_finish(res);
+          console.log("Carmenta: Activated resident instance via D-Bus");
+        } catch (e) {
+          console.log(
+            `Carmenta: No resident instance (${e.message}); spawning new process`,
+          );
+          this._spawnNewProcess();
+        }
+      },
+    );
+  }
+
+  _prewarmApp() {
+    const appBusName = this._appId;
+    // Only launch a pre-warm instance if Carmenta isn't already running.
+    // Launching one while a resident exists would forward an "activate" and
+    // pop the window onto the screen at login.
+    Gio.DBus.session.call(
+      "org.freedesktop.DBus",
+      "/org/freedesktop/DBus",
+      "org.freedesktop.DBus",
+      "NameHasOwner",
+      new GLib.Variant("(s)", [appBusName]),
+      new GLib.VariantType("(b)"),
+      Gio.DBusCallFlags.NONE,
+      300,
+      null,
+      (connection, res) => {
+        let running = false;
+        try {
+          [running] = connection.call_finish(res).deep_unpack();
+        } catch (e) {
+          log(`[Carmenta] NameHasOwner check failed: ${e}`);
+        }
+        if (!running) {
+          console.log("Carmenta: Pre-warming hidden resident instance");
+          this._spawnNewProcess(["--prewarm"]);
+        }
+      },
+    );
+  }
+
+  _spawnNewProcess(extraArgs = []) {
     try {
-      console.log("Carmenta: Launching app via keybinding");
+      console.log("Carmenta: Launching app");
       const launcher = new Gio.SubprocessLauncher({
         flags: Gio.SubprocessFlags.NONE,
       });
 
       // try launching from PATH first
       try {
-        launcher.spawnv(["carmenta"]);
+        launcher.spawnv(["carmenta", ...extraArgs]);
         console.log("Carmenta: App launched successfully");
       } catch (pathError) {
         // try common installation locations
@@ -279,7 +345,7 @@ export default class CarmentaExtension extends Extension {
         for (const path of locations) {
           if (GLib.file_test(path, GLib.FileTest.EXISTS)) {
             try {
-              launcher.spawnv([path]);
+              launcher.spawnv([path, ...extraArgs]);
               console.log(`Carmenta: App launched from ${path}`);
               launched = true;
               break;
@@ -298,7 +364,7 @@ export default class CarmentaExtension extends Extension {
             flags:
               Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_PIPE,
           });
-          flatpakLauncher.spawnv(["flatpak", "run", "org.carmenta.App"]);
+          flatpakLauncher.spawnv(["flatpak", "run", this._appId, ...extraArgs]);
           log("[Carmenta] Launched via Flatpak");
           return; // exit if successful
         } catch (e) {

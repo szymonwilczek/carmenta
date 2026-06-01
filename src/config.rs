@@ -5,7 +5,7 @@ const MAX_WINDOW_WIDTH: i64 = 1400;
 const MIN_WINDOW_HEIGHT: i64 = 320;
 const MAX_WINDOW_HEIGHT: i64 = 1400;
 
-#[derive(Debug, Clone, Parser)]
+#[derive(Debug, Clone, Parser, PartialEq, Eq)]
 #[command(name = "carmenta", about = "Fast emoji picker for Linux", version)]
 pub struct AppConfig {
     #[arg(
@@ -30,6 +30,20 @@ pub struct AppConfig {
         help = "Hide GIF tab to reduce resource usage"
     )]
     pub disable_gifs: bool,
+
+    #[arg(
+        long = "close-on-select",
+        default_value_t = false,
+        help = "Close the window automatically after selecting an item"
+    )]
+    pub close_on_select: bool,
+
+    #[arg(
+        long = "prewarm",
+        default_value_t = false,
+        help = "Start resident in the background without showing the window (warms caches so the first invocation is instant)"
+    )]
+    pub prewarm: bool,
 }
 
 impl AppConfig {

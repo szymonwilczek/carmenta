@@ -41,7 +41,7 @@ impl SymbolObject {
     pub fn char(&self) -> String {
         self.imp().char.borrow().clone()
     }
-    
+
     pub fn name(&self) -> String {
         self.imp().name.borrow().clone()
     }
@@ -69,31 +69,42 @@ pub fn get_symbols() -> Vec<SymbolObject> {
 
     let blocks_to_scan = vec![
         (ub::ARROWS, SymbolCategory::Arrows, "Arrows"),
-        (ub::SUPPLEMENTAL_ARROWS_A, SymbolCategory::Arrows, "Supp. Arrows A"),
-        (ub::SUPPLEMENTAL_ARROWS_B, SymbolCategory::Arrows, "Supp. Arrows B"),
-        
+        (
+            ub::SUPPLEMENTAL_ARROWS_A,
+            SymbolCategory::Arrows,
+            "Supp. Arrows A",
+        ),
+        (
+            ub::SUPPLEMENTAL_ARROWS_B,
+            SymbolCategory::Arrows,
+            "Supp. Arrows B",
+        ),
         (ub::MATHEMATICAL_OPERATORS, SymbolCategory::Math, "Math"),
-        (ub::SUPPLEMENTAL_MATHEMATICAL_OPERATORS, SymbolCategory::Math, "Supp. Math"),
-        
+        (
+            ub::SUPPLEMENTAL_MATHEMATICAL_OPERATORS,
+            SymbolCategory::Math,
+            "Supp. Math",
+        ),
         (ub::CURRENCY_SYMBOLS, SymbolCategory::Currency, "Currency"),
-        
-        (ub::MISCELLANEOUS_TECHNICAL, SymbolCategory::Tech, "Technical"),
+        (
+            ub::MISCELLANEOUS_TECHNICAL,
+            SymbolCategory::Tech,
+            "Technical",
+        ),
         (ub::CONTROL_PICTURES, SymbolCategory::Tech, "Control"),
-        
         (ub::BOX_DRAWING, SymbolCategory::BoxDrawing, "Box Drawing"),
         (ub::BLOCK_ELEMENTS, SymbolCategory::BoxDrawing, "Block"),
-        
         (ub::MISCELLANEOUS_SYMBOLS, SymbolCategory::Misc, "Misc"),
         (ub::DINGBATS, SymbolCategory::Misc, "Dingbats"),
     ];
 
     for (block, cat, label) in blocks_to_scan {
-        let start = block.start() as u32; 
+        let start = block.start() as u32;
         let end = block.end() as u32;
 
         for code in start..=end {
             if let Some(c) = std::char::from_u32(code) {
-                 symbols.push(SymbolObject::new(c, label, cat));
+                symbols.push(SymbolObject::new(c, label, cat));
             }
         }
     }

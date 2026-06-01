@@ -1,13 +1,11 @@
+use super::symbols_data::{get_symbols, SymbolCategory, SymbolObject};
 use gtk4::prelude::*;
 use gtk4::{
-    gio, glib, GridView, SignalListItemFactory, SingleSelection, 
-    PolicyType, ScrolledWindow, Box, Orientation, ToggleButton, 
-    CustomFilter, FilterListModel
+    gio, glib, Box, CustomFilter, FilterListModel, GridView, Orientation, PolicyType,
+    ScrolledWindow, SignalListItemFactory, SingleSelection, ToggleButton,
 };
 use std::cell::RefCell;
 use std::rc::Rc;
-use crate::dbus::DBusClient;
-use super::symbols_data::{SymbolObject, SymbolCategory, get_symbols};
 
 pub fn create_symbols_grid(search_entry: &gtk4::SearchEntry) -> Box {
     let container = Box::new(Orientation::Horizontal, 0);
@@ -28,47 +26,59 @@ pub fn create_symbols_grid(search_entry: &gtk4::SearchEntry) -> Box {
     let current_category = Rc::new(RefCell::new(SymbolCategory::Arrows));
     let current_query = Rc::new(RefCell::new(String::new()));
 
-    let filter = CustomFilter::new(glib::clone!(#[strong] current_category, #[strong] current_query, move |obj| {
-        let sym = obj.downcast_ref::<SymbolObject>().unwrap();
-        let query = current_query.borrow();
+    let filter = CustomFilter::new(glib::clone!(
+        #[strong]
+        current_category,
+        #[strong]
+        current_query,
+        move |obj| {
+            let sym = obj.downcast_ref::<SymbolObject>().unwrap();
+            let query = current_query.borrow();
 
-        if !query.is_empty() {
-            return sym.name().to_lowercase().contains(query.as_str());
+            if !query.is_empty() {
+                return sym.name().to_lowercase().contains(query.as_str());
+            }
+
+            sym.category() == *current_category.borrow()
         }
-        
-        sym.category() == *current_category.borrow()
-    }));
+    ));
 
     let filter_model = FilterListModel::new(Some(store), Some(filter.clone()));
     let selection_model = SingleSelection::new(Some(filter_model));
 
     // Connect Search with debounce (150ms)
     let debounce_source: Rc<RefCell<Option<glib::SourceId>>> = Rc::new(RefCell::new(None));
-    search_entry.connect_search_changed(glib::clone!(#[weak] filter, #[strong] current_query, #[strong] debounce_source, move |entry| {
-        // Cancel previous debounce timer if still pending
-        if let Some(source_id) = debounce_source.borrow_mut().take() {
-            let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                source_id.remove();
-            }));
-        }
-        
-        let query = entry.text().to_string().to_lowercase();
-        let current_query_clone = current_query.clone();
-        let filter_weak = filter.downgrade();
-        let debounce_source_clone = debounce_source.clone();
-        
-        let source_id = glib::timeout_add_local_once(
-            std::time::Duration::from_millis(150),
-            move || {
-                *debounce_source_clone.borrow_mut() = None;
-                *current_query_clone.borrow_mut() = query;
-                if let Some(f) = filter_weak.upgrade() {
-                    f.changed(gtk4::FilterChange::Different);
-                }
+    search_entry.connect_search_changed(glib::clone!(
+        #[weak]
+        filter,
+        #[strong]
+        current_query,
+        #[strong]
+        debounce_source,
+        move |entry| {
+            // Cancel previous debounce timer if still pending
+            if let Some(source_id) = debounce_source.borrow_mut().take() {
+                let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                    source_id.remove();
+                }));
             }
-        );
-        *debounce_source.borrow_mut() = Some(source_id);
-    }));
+
+            let query = entry.text().to_string().to_lowercase();
+            let current_query_clone = current_query.clone();
+            let filter_weak = filter.downgrade();
+            let debounce_source_clone = debounce_source.clone();
+
+            let source_id =
+                glib::timeout_add_local_once(std::time::Duration::from_millis(150), move || {
+                    *debounce_source_clone.borrow_mut() = None;
+                    *current_query_clone.borrow_mut() = query;
+                    if let Some(f) = filter_weak.upgrade() {
+                        f.changed(gtk4::FilterChange::Different);
+                    }
+                });
+            *debounce_source.borrow_mut() = Some(source_id);
+        }
+    ));
 
     // Buttons
     let categories = vec![
@@ -96,12 +106,18 @@ pub fn create_symbols_grid(search_entry: &gtk4::SearchEntry) -> Box {
         }
 
         let cat_val = cat;
-        btn.connect_toggled(glib::clone!(#[strong] current_category, #[weak] filter, move |b| {
-            if b.is_active() {
-                *current_category.borrow_mut() = cat_val;
-                filter.changed(gtk4::FilterChange::Different);
+        btn.connect_toggled(glib::clone!(
+            #[strong]
+            current_category,
+            #[weak]
+            filter,
+            move |b| {
+                if b.is_active() {
+                    *current_category.borrow_mut() = cat_val;
+                    filter.changed(gtk4::FilterChange::Different);
+                }
             }
-        }));
+        ));
         sidebar.append(&btn);
     }
     container.append(&sidebar);
@@ -109,18 +125,15 @@ pub fn create_symbols_grid(search_entry: &gtk4::SearchEntry) -> Box {
     // 4. Grid Factory
     let factory = SignalListItemFactory::new();
     factory.connect_setup(move |_factory, item| {
-         let item = item.downcast_ref::<gtk4::ListItem>().unwrap();
-         let button = gtk4::Button::builder().css_classes(["emoji-btn", "flat"]).build();
-         item.set_child(Some(&button));
-         button.connect_clicked(move |btn| {
-             let text = btn.label().unwrap_or_default().to_string();
-             
-             // History + Insertion Logic
-             crate::app::mark_inserting();
-             crate::history::add_recent(text.clone());
-             
-             DBusClient::insert_or_copy(&text);
-         });
+        let item = item.downcast_ref::<gtk4::ListItem>().unwrap();
+        let button = gtk4::Button::builder()
+            .css_classes(["emoji-btn", "flat"])
+            .build();
+        item.set_child(Some(&button));
+        button.connect_clicked(move |btn| {
+            let text = btn.label().unwrap_or_default().to_string();
+            super::insert_text(text, crate::close_on_select());
+        });
     });
 
     factory.connect_bind(move |_factory, item| {
@@ -146,6 +159,17 @@ pub fn create_symbols_grid(search_entry: &gtk4::SearchEntry) -> Box {
         .build();
 
     container.append(&scrolled);
-    
+
+    // Enter in the search box = select the first visible item and close.
+    super::on_search_enter_commit::<SymbolObject, _>(
+        search_entry,
+        &container,
+        &selection_model,
+        &debounce_source,
+        &current_query,
+        &filter,
+        |o| o.char(),
+    );
+
     container
 }

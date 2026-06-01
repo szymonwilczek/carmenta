@@ -1,5 +1,5 @@
 Name:           carmenta
-Version:        0.3.1
+Version:        0.4.0
 Release:        1%{?dist}
 Summary:        A GTK4 Emoji Picker for GNOME
 
@@ -46,6 +46,11 @@ appstream-util validate-relax --nonet %{buildroot}%{_metainfodir}/*.metainfo.xml
 %{_metainfodir}/*.metainfo.xml
 
 %changelog
+* Mon Jun 01 2026 Szymon Wilczek <szymonwilczek@github> - 0.4.0-1
+- Add resident prewarm startup and close-on-select workflow
+- Add Enter-to-select-first-result keyboard flow
+- Keep runtime CLI options working with the resident process
+
 * Sat May 17 2026 Szymon Wilczek <szymonwilczek@github> - 0.3.1-1
 - Fix segfault caused by GtkMediaFile race condition in GIF grid
 - Fix file descriptor leak by switching to gdk-pixbuf animation

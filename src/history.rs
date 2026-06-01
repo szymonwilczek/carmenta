@@ -1,8 +1,8 @@
+use gtk4::glib;
 use serde::{Deserialize, Serialize};
+use std::cell::RefCell;
 use std::fs;
 use std::path::PathBuf;
-use std::cell::RefCell;
-use gtk4::glib;
 
 const MAX_HISTORY: usize = 50;
 const HISTORY_FILE: &str = "history.json";
@@ -75,9 +75,7 @@ pub fn add_recent(emoji: String) {
 }
 
 pub fn get_recent() -> Vec<String> {
-    GLOBAL_HISTORY.with(|h| {
-        h.borrow().recent.clone()
-    })
+    GLOBAL_HISTORY.with(|h| h.borrow().recent.clone())
 }
 
 /// Register a callback to be called when history changes

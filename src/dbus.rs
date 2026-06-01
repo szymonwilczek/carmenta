@@ -1,8 +1,8 @@
-use zbus::Connection;
 use gtk4::gdk;
 use gtk4::prelude::*;
-use tokio::sync::OnceCell;
 use std::time::Duration;
+use tokio::sync::OnceCell;
+use zbus::Connection;
 
 pub struct DBusClient;
 
@@ -21,25 +21,34 @@ impl DBusClient {
         }
     }
 
-    pub fn insert_or_copy(text: &str) {
+    pub fn insert_or_copy(text: &str, close_after: bool) {
         let text_owned = text.to_string();
         if let Some(rt) = crate::RUNTIME.get() {
             rt.spawn(async move {
                 // wrap the extension call with a timeout
-                let result = tokio::time::timeout(
-                    DBUS_TIMEOUT,
-                    Self::try_insert_via_extension(&text_owned)
-                ).await;
-                
+                let result =
+                    tokio::time::timeout(DBUS_TIMEOUT, Self::try_insert_via_extension(&text_owned))
+                        .await;
+
                 match result {
-                    Ok(Ok(_)) => {}, // success
+                    Ok(Ok(_)) => {
+                        // insert succeeded via extension; the fallback path
+                        // already quits on its own, so only handle the
+                        // close-after-select request here.
+                        if close_after {
+                            Self::hide_on_main();
+                        }
+                    }
                     Ok(Err(e)) => {
                         eprintln!("DBus error: {}", e);
-                        Self::fallback_copy_and_quit(text_owned);
+                        Self::fallback_copy(text_owned, close_after);
                     }
                     Err(_) => {
-                        eprintln!("DBus timeout: extension did not respond in {:?}", DBUS_TIMEOUT);
-                        Self::fallback_copy_and_quit(text_owned);
+                        eprintln!(
+                            "DBus timeout: extension did not respond in {:?}",
+                            DBUS_TIMEOUT
+                        );
+                        Self::fallback_copy(text_owned, close_after);
                     }
                 }
             });
@@ -47,14 +56,25 @@ impl DBusClient {
             eprintln!("Runtime not initialized!");
         }
     }
-    
-    fn fallback_copy_and_quit(text: String) {
+
+    fn fallback_copy(text: String, close_after: bool) {
         gtk4::glib::MainContext::default().invoke(move || {
             Self::copy_to_clipboard(&text);
-            gtk4::glib::timeout_add_local_once(
-                Duration::from_millis(100),
-                || crate::app::request_default_quit()
-            );
+            if close_after {
+                gtk4::glib::timeout_add_local_once(Duration::from_millis(100), || {
+                    crate::app::hide_default()
+                });
+            }
+        });
+    }
+
+    // Hide shortly after a successful insert, leaving the paste (driven by the
+    // extension inside gnome-shell) enough time to settle.
+    fn hide_on_main() {
+        gtk4::glib::MainContext::default().invoke(|| {
+            gtk4::glib::timeout_add_local_once(Duration::from_millis(100), || {
+                crate::app::hide_default()
+            });
         });
     }
 
@@ -62,49 +82,51 @@ impl DBusClient {
         if let Some(rt) = crate::RUNTIME.get() {
             rt.spawn(async move {
                 // shorter timeout for pin_window as its non-critical
-                let result = tokio::time::timeout(
-                    Duration::from_millis(200),
-                    Self::do_pin_window(pinned)
-                ).await;
-                
+                let result =
+                    tokio::time::timeout(Duration::from_millis(200), Self::do_pin_window(pinned))
+                        .await;
+
                 if let Err(_) = result {
                     eprintln!("DBus timeout: pin_window did not complete");
                 }
             });
         }
     }
-    
+
     async fn do_pin_window(pinned: bool) -> anyhow::Result<()> {
         let conn = Self::get_connection().await?;
         conn.call_method(
-            Some("org.gnome.Shell.Extensions.Carmenta"), 
-            "/org/gnome/Shell/Extensions/Carmenta",    
-            Some("org.gnome.Shell.Extensions.Carmenta"), 
+            Some("org.gnome.Shell.Extensions.Carmenta"),
+            "/org/gnome/Shell/Extensions/Carmenta",
+            Some("org.gnome.Shell.Extensions.Carmenta"),
             "PinWindow",
             &(pinned),
-        ).await?;
+        )
+        .await?;
         Ok(())
     }
 
     async fn get_connection() -> anyhow::Result<Connection> {
-        let conn: &Connection = CONNECTION.get_or_try_init(|| async {
-            Connection::session().await
-        }).await?;
-        
+        let conn: &Connection = CONNECTION
+            .get_or_try_init(|| async { Connection::session().await })
+            .await?;
+
         Ok(conn.clone())
     }
 
     async fn try_insert_via_extension(text: &str) -> anyhow::Result<()> {
         let connection = Self::get_connection().await?;
-        
-        connection.call_method(
-            Some("org.gnome.Shell.Extensions.Carmenta"), 
-            "/org/gnome/Shell/Extensions/Carmenta",    
-            Some("org.gnome.Shell.Extensions.Carmenta"), 
-            "InsertText",
-            &(text),
-        ).await?;
-        
+
+        connection
+            .call_method(
+                Some("org.gnome.Shell.Extensions.Carmenta"),
+                "/org/gnome/Shell/Extensions/Carmenta",
+                Some("org.gnome.Shell.Extensions.Carmenta"),
+                "InsertText",
+                &(text),
+            )
+            .await?;
+
         Ok(())
     }
 
