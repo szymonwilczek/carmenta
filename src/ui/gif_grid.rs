@@ -73,9 +73,13 @@ pub fn create_gif_grid(search_entry: &gtk4::SearchEntry) -> Box {
             .css_classes(["gif-btn", "flat"])
             .build();
 
+        // GIFs are images, not text, so they cant ride the CSS font-size
+        // scaling
+        // Scale the requested thumbnail size directly instead
+        let gif_size = (100.0 * crate::scale()).round() as i32;
         let picture = gtk4::Picture::builder()
-            .width_request(100)
-            .height_request(100)
+            .width_request(gif_size)
+            .height_request(gif_size)
             .build();
 
         button.set_child(Some(&picture));
@@ -196,11 +200,21 @@ pub fn create_gif_grid(search_entry: &gtk4::SearchEntry) -> Box {
         }
     });
 
+    // Larger thumbnails need fewer columns so the row still fits the window
+    // width (the scrolled window never shows a horizontal scrollbar)
+    let scale = crate::scale();
+    let (min_cols, max_cols) = if scale <= 1.0 {
+        (3, 4)
+    } else if scale <= 1.5 {
+        (2, 3)
+    } else {
+        (1, 2)
+    };
     let grid_view = GridView::builder()
         .model(&selection_model)
         .factory(&factory)
-        .max_columns(4)
-        .min_columns(3)
+        .max_columns(max_cols)
+        .min_columns(min_cols)
         .build();
 
     let scrolled_window = ScrolledWindow::builder()
