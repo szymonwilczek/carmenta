@@ -118,6 +118,7 @@ Available options:
 - `--disable-gifs` - hides GIF tab (can improve performance and lower network usage)
 - `--close-on-select` - dismiss the window automatically after picking an item
 - `--prewarm` - start resident in the background without showing the window (warms render caches so the first invocation is instant)
+- `--scale <factor>` - UI scale multiplier for emoji/kaomoji/symbols/GIFs (e.g. `1.25` = 125%), range: `0.5..=4.0`
 
 > Carmenta stays resident after first launch and hides instead of quitting, so
 > subsequent invocations re-show instantly. The GNOME Shell extension launches

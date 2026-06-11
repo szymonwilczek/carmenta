@@ -148,11 +148,23 @@ pub fn create_kaomoji_grid(search_entry: &gtk4::SearchEntry) -> Box {
         button.set_tooltip_text(Some(&entry.name()));
     });
 
+    // Kaomoji are wide text
+    // As the scale grows each item needs more width or the glyphs get clipped
+    // (the scrolled window has no horizontal scrollbar)
+    // Drop to fewer columns at higher scales so each item stays wide enough
+    let scale = crate::scale();
+    let (min_cols, max_cols) = if scale <= 1.0 {
+        (2, 3)
+    } else if scale <= 1.5 {
+        (1, 2)
+    } else {
+        (1, 1)
+    };
     let grid_view = GridView::builder()
         .model(&selection_model)
         .factory(&factory)
-        .max_columns(3) // Less columns, wider items
-        .min_columns(2)
+        .max_columns(max_cols)
+        .min_columns(min_cols)
         .enable_rubberband(false)
         .build();
 

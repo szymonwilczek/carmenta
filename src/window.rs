@@ -1,10 +1,50 @@
 use crate::config::AppConfig;
 use gtk4::glib;
 use gtk4::prelude::*;
-use gtk4::{gio, Box, Orientation, SearchEntry};
+use gtk4::{gio, Box, CssProvider, Orientation, SearchEntry};
 use libadwaita::{Application, ApplicationWindow, ViewStack};
+use std::cell::Cell;
 use std::cell::RefCell;
 use std::rc::Rc;
+
+thread_local! {
+    // Single application-level CSS provider whose body is rewritten whenever
+    // the scale changes.
+    // Text-based grid items (emoji, kaomoji, symbols) are scaled with an `em`
+    // font-size, so 1.0 leaves the theme defaults untouched.
+    static SCALE_CSS_PROVIDER: CssProvider = CssProvider::new();
+    static SCALE_CSS_INSTALLED: Cell<bool> = const { Cell::new(false) };
+}
+
+fn scale_css(scale: f64) -> String {
+    format!(
+        ".emoji-btn, .emoji-btn-small, .kaomoji-btn {{ font-size: {scale}em; }}"
+    )
+}
+
+/// Install (once) and update the application-wide CSS provider that scales the
+/// text-based grid items.
+///
+/// Safe to call repeatedly: the provider is added to the display only the first
+/// time, later calls just rewrite its contents so a resident window re-invoked
+/// with a different `--scale` restyles live.
+fn apply_scale_css(scale: f64) {
+    SCALE_CSS_PROVIDER.with(|provider| {
+        provider.load_from_data(&scale_css(scale));
+        SCALE_CSS_INSTALLED.with(|installed| {
+            if !installed.get() {
+                if let Some(display) = gtk4::gdk::Display::default() {
+                    gtk4::style_context_add_provider_for_display(
+                        &display,
+                        provider,
+                        gtk4::STYLE_PROVIDER_PRIORITY_APPLICATION,
+                    );
+                    installed.set(true);
+                }
+            }
+        });
+    });
+}
 
 pub struct CarmentaWindow {
     pub window: ApplicationWindow,
@@ -14,6 +54,11 @@ pub struct CarmentaWindow {
 
 impl CarmentaWindow {
     pub fn new(app: &Application, config: &AppConfig) -> Self {
+        // Scale must be set before the grids are built:
+        // GIF grid reads the global scale when creating its picture widgets
+        crate::set_scale(config.scale);
+        apply_scale_css(config.scale);
+
         // Menu
         let menu = gio::Menu::new();
         menu.append(Some("About Carmenta"), Some("app.about"));
@@ -193,6 +238,11 @@ impl CarmentaWindow {
 
     pub fn apply_config(&self, config: &AppConfig) {
         self.window.set_default_size(config.width, config.height);
+        // Restyle text grids live
+        // GIF picture sizes only pick up the new scale for items (re)bound
+        // after this point
+        crate::set_scale(config.scale);
+        apply_scale_css(config.scale);
     }
 
     /// Show (or re-show) the picker: present, clear any previous query, and

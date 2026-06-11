@@ -1,5 +1,5 @@
 Name:           carmenta
-Version:        0.4.0
+Version:        0.5.0
 Release:        1%{?dist}
 Summary:        A GTK4 Emoji Picker for GNOME
 
@@ -46,6 +46,10 @@ appstream-util validate-relax --nonet %{buildroot}%{_metainfodir}/*.metainfo.xml
 %{_metainfodir}/*.metainfo.xml
 
 %changelog
+* Thu Jun 11 2026 Szymon Wilczek <szymonwilczek@github> - 0.5.0-1
+- Add --scale option to size emoji/kaomoji/symbols/GIFs (0.5-4.0, default 1.0)
+- Use fewer grid columns at higher scales so wide kaomoji and GIFs don't clip
+
 * Mon Jun 01 2026 Szymon Wilczek <szymonwilczek@github> - 0.4.0-1
 - Add resident prewarm startup and close-on-select workflow
 - Add Enter-to-select-first-result keyboard flow
