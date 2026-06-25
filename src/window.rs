@@ -134,6 +134,34 @@ impl CarmentaWindow {
             page.set_icon_name(Some("emblem-photos-symbolic"));
         }
 
+        // Merged cross-tab search results:
+        // page has no title, so the bottom view switcher doesnt list it;
+        // its shown only while a query is active
+        //
+        // `last_browse` remembers which real tab the user was on, so results
+        // can prioritise it and restore it when the query is cleared
+        let last_browse = Rc::new(RefCell::new(String::from("emoji")));
+        let results_page = crate::ui::search::create_search_results_grid(
+            &search_entry,
+            &stack,
+            last_browse.clone(),
+        );
+        stack
+            .add(&results_page)
+            .set_name(Some(crate::ui::search::RESULTS_PAGE));
+
+        stack.connect_visible_child_notify(glib::clone!(
+            #[strong]
+            last_browse,
+            move |stack| {
+                if let Some(name) = stack.visible_child_name() {
+                    if name != crate::ui::search::RESULTS_PAGE {
+                        *last_browse.borrow_mut() = name.to_string();
+                    }
+                }
+            }
+        ));
+
         // View Switcher (Bottom Bar)
         let view_switcher = libadwaita::ViewSwitcherBar::builder()
             .stack(&stack)
