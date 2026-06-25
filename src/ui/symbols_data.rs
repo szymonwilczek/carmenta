@@ -11,7 +11,7 @@ mod imp {
     #[derive(Default)]
     pub struct SymbolObject {
         pub char: RefCell<String>,
-        pub name: RefCell<String>, // block name
+        pub name: RefCell<String>, // search blob: "<block> <unicode name>"
         pub category: RefCell<SymbolCategory>,
     }
 
@@ -33,7 +33,10 @@ impl SymbolObject {
     pub fn new(c: char, block_name: &str, category: SymbolCategory) -> Self {
         let obj: Self = glib::Object::builder().build();
         *obj.imp().char.borrow_mut() = c.to_string();
-        *obj.imp().name.borrow_mut() = format!("{} ({})", c, block_name); // placeholder name
+        let unicode_name = unicode_names2::name(c)
+            .map(|n| n.to_string())
+            .unwrap_or_default();
+        *obj.imp().name.borrow_mut() = format!("{} {}", block_name, unicode_name);
         *obj.imp().category.borrow_mut() = category;
         obj
     }
@@ -57,6 +60,7 @@ impl SymbolObject {
 pub enum SymbolCategory {
     #[default]
     Arrows,
+    Greek,
     Math,
     Currency,
     Tech,
@@ -79,12 +83,18 @@ pub fn get_symbols() -> Vec<SymbolObject> {
             SymbolCategory::Arrows,
             "Supp. Arrows B",
         ),
+        (
+            ub::GREEK_AND_COPTIC,
+            SymbolCategory::Greek,
+            "Greek and Coptic",
+        ),
         (ub::MATHEMATICAL_OPERATORS, SymbolCategory::Math, "Math"),
         (
             ub::SUPPLEMENTAL_MATHEMATICAL_OPERATORS,
             SymbolCategory::Math,
             "Supp. Math",
         ),
+        (ub::NUMBER_FORMS, SymbolCategory::Math, "Number Forms"),
         (ub::CURRENCY_SYMBOLS, SymbolCategory::Currency, "Currency"),
         (
             ub::MISCELLANEOUS_TECHNICAL,
@@ -104,6 +114,11 @@ pub fn get_symbols() -> Vec<SymbolObject> {
 
         for code in start..=end {
             if let Some(c) = std::char::from_u32(code) {
+                // skip reserved/unassigned codepoints:
+                // they have no Unicode name and only render as empty/tofu boxes
+                if unicode_names2::name(c).is_none() {
+                    continue;
+                }
                 symbols.push(SymbolObject::new(c, label, cat));
             }
         }

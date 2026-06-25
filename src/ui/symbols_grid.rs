@@ -83,6 +83,7 @@ pub fn create_symbols_grid(search_entry: &gtk4::SearchEntry) -> Box {
     // Buttons
     let categories = vec![
         ("→", SymbolCategory::Arrows, "Arrows"),
+        ("Ω", SymbolCategory::Greek, "Greek"),
         ("∑", SymbolCategory::Math, "Math"),
         ("€", SymbolCategory::Currency, "Currency"),
         ("⌘", SymbolCategory::Tech, "Technical"),
