@@ -1,5 +1,5 @@
 Name:           carmenta
-Version:        0.5.0
+Version:        0.6.0
 Release:        1%{?dist}
 Summary:        A GTK4 Emoji Picker for GNOME
 
@@ -46,6 +46,12 @@ appstream-util validate-relax --nonet %{buildroot}%{_metainfodir}/*.metainfo.xml
 %{_metainfodir}/*.metainfo.xml
 
 %changelog
+* Thu Jun 25 2026 Szymon Wilczek <szymonwilczek@github> - 0.6.0-1
+- Add a dedicated Greek tab (Greek and Coptic) to the Symbols view
+- Add Number Forms (vulgar fractions, roman numerals) under Math
+- Make symbol search match official Unicode names
+- Hide reserved/unassigned codepoints that rendered as empty tofu boxes
+
 * Thu Jun 11 2026 Szymon Wilczek <szymonwilczek@github> - 0.5.0-1
 - Add --scale option to size emoji/kaomoji/symbols/GIFs (0.5-4.0, default 1.0)
 - Use fewer grid columns at higher scales so wide kaomoji and GIFs don't clip
