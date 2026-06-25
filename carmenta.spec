@@ -1,5 +1,5 @@
 Name:           carmenta
-Version:        0.6.0
+Version:        0.7.0
 Release:        1%{?dist}
 Summary:        A GTK4 Emoji Picker for GNOME
 
@@ -46,6 +46,11 @@ appstream-util validate-relax --nonet %{buildroot}%{_metainfodir}/*.metainfo.xml
 %{_metainfodir}/*.metainfo.xml
 
 %changelog
+* Thu Jun 25 2026 Szymon Wilczek <szymonwilczek@github> - 0.7.0-1
+- Make search fuzzy and word-order independent (e.g. "arrow right" finds "right arrow")
+- Search across emoji, kaomoji and symbols at once, ranked best match first
+- Keep the GIF tab on its own dedicated search
+
 * Thu Jun 25 2026 Szymon Wilczek <szymonwilczek@github> - 0.6.0-1
 - Add a dedicated Greek tab (Greek and Coptic) to the Symbols view
 - Add Number Forms (vulgar fractions, roman numerals) under Math
