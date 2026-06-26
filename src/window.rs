@@ -134,6 +134,34 @@ impl CarmentaWindow {
             page.set_icon_name(Some("emblem-photos-symbolic"));
         }
 
+        // Merged cross-tab search results:
+        // page has no title, so the bottom view switcher doesnt list it;
+        // its shown only while a query is active
+        //
+        // `last_browse` remembers which real tab the user was on, so results
+        // can prioritise it and restore it when the query is cleared
+        let last_browse = Rc::new(RefCell::new(String::from("emoji")));
+        let results_page = crate::ui::search::create_search_results_grid(
+            &search_entry,
+            &stack,
+            last_browse.clone(),
+        );
+        stack
+            .add(&results_page)
+            .set_name(Some(crate::ui::search::RESULTS_PAGE));
+
+        stack.connect_visible_child_notify(glib::clone!(
+            #[strong]
+            last_browse,
+            move |stack| {
+                if let Some(name) = stack.visible_child_name() {
+                    if name != crate::ui::search::RESULTS_PAGE {
+                        *last_browse.borrow_mut() = name.to_string();
+                    }
+                }
+            }
+        ));
+
         // View Switcher (Bottom Bar)
         let view_switcher = libadwaita::ViewSwitcherBar::builder()
             .stack(&stack)
@@ -220,9 +248,16 @@ impl CarmentaWindow {
         // Escape dismisses the picker (hide, stay resident).
         let key_controller = gtk4::EventControllerKey::new();
         key_controller.set_propagation_phase(gtk4::PropagationPhase::Capture);
-        key_controller.connect_key_pressed(move |_, key, _, _| {
+        let search_entry_for_keys = search_entry.clone();
+        key_controller.connect_key_pressed(move |_, key, _, modifier| {
             if key == gtk4::gdk::Key::Escape {
                 crate::app::hide_default();
+                return glib::Propagation::Stop;
+            }
+            if modifier.contains(gtk4::gdk::ModifierType::CONTROL_MASK)
+                && (key == gtk4::gdk::Key::f || key == gtk4::gdk::Key::F)
+            {
+                search_entry_for_keys.grab_focus();
                 return glib::Propagation::Stop;
             }
             glib::Propagation::Proceed
