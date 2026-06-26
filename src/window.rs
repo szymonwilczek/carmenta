@@ -248,9 +248,16 @@ impl CarmentaWindow {
         // Escape dismisses the picker (hide, stay resident).
         let key_controller = gtk4::EventControllerKey::new();
         key_controller.set_propagation_phase(gtk4::PropagationPhase::Capture);
-        key_controller.connect_key_pressed(move |_, key, _, _| {
+        let search_entry_for_keys = search_entry.clone();
+        key_controller.connect_key_pressed(move |_, key, _, modifier| {
             if key == gtk4::gdk::Key::Escape {
                 crate::app::hide_default();
+                return glib::Propagation::Stop;
+            }
+            if modifier.contains(gtk4::gdk::ModifierType::CONTROL_MASK)
+                && (key == gtk4::gdk::Key::f || key == gtk4::gdk::Key::F)
+            {
+                search_entry_for_keys.grab_focus();
                 return glib::Propagation::Stop;
             }
             glib::Propagation::Proceed
