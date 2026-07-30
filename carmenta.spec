@@ -1,5 +1,5 @@
 Name:           carmenta
-Version:        0.7.1
+Version:        0.8.0
 Release:        1%{?dist}
 Summary:        A GTK4 Emoji Picker for GNOME
 
@@ -46,6 +46,9 @@ appstream-util validate-relax --nonet %{buildroot}%{_metainfodir}/*.metainfo.xml
 %{_metainfodir}/*.metainfo.xml
 
 %changelog
+* Thu Jul 30 2026 Szymon Wilczek <szymonwilczek@github> - 0.8.0-1
+- Add Vim navigations (h/j/k/l + Alt for category switching)
+
 * Thu Jul 30 2026 Szymon Wilczek <szymonwilczek@github> - 0.7.1-1
 - Fix Escape button to not quit application immediately
 
