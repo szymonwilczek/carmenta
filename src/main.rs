@@ -17,6 +17,7 @@ const APP_ID: &str = "io.github.szymonwilczek.carmenta";
 pub static RUNTIME: OnceLock<tokio::runtime::Runtime> = OnceLock::new();
 pub static CLIENT: OnceLock<reqwest::Client> = OnceLock::new();
 pub static CLOSE_ON_SELECT: AtomicBool = AtomicBool::new(false);
+pub static VIM: AtomicBool = AtomicBool::new(false);
 // UI scale multiplier, stored as f64 bits (0x3FF0000000000000 == 1.0)
 pub static SCALE_BITS: AtomicU64 = AtomicU64::new(0x3FF0000000000000);
 
@@ -27,6 +28,15 @@ pub fn close_on_select() -> bool {
 
 pub fn set_close_on_select(value: bool) {
     CLOSE_ON_SELECT.store(value, Ordering::Relaxed);
+}
+
+/// Whether Vim-style hjkl navigation is active (`--vim`).
+pub fn vim_enabled() -> bool {
+    VIM.load(Ordering::Relaxed)
+}
+
+pub fn set_vim(value: bool) {
+    VIM.store(value, Ordering::Relaxed);
 }
 
 /// UI scale multiplier applied to grid items (1.0 == 100%).
@@ -48,6 +58,7 @@ fn main() -> anyhow::Result<()> {
     let config = AppConfig::parse();
 
     set_close_on_select(config.close_on_select);
+    set_vim(config.vim);
     set_scale(config.scale);
 
     let rt = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");

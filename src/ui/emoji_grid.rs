@@ -14,6 +14,7 @@ pub fn create_emoji_grid(search_entry: &gtk4::SearchEntry) -> Box {
 
     // 1. Sidebar (Categories)
     let sidebar = Box::new(Orientation::Vertical, 6);
+    sidebar.add_css_class(super::vim::SIDEBAR_CLASS);
     sidebar.set_margin_start(6);
     sidebar.set_margin_end(6);
     sidebar.set_margin_top(6);

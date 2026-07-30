@@ -58,6 +58,13 @@ pub struct AppConfig {
     pub prewarm: bool,
 
     #[arg(
+        long = "vim",
+        default_value_t = false,
+        help = "Enable Vim-style navigation: hjkl inside the focused zone, Alt+hjkl between zones"
+    )]
+    pub vim: bool,
+
+    #[arg(
         long,
         default_value_t = 1.0,
         value_parser = parse_scale,
