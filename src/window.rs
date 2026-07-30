@@ -46,6 +46,20 @@ fn apply_scale_css(scale: f64) {
     });
 }
 
+/// Whether the keyboard focus is inside the search box.
+///
+/// Entry delegates focus to inner text widget,
+/// so focused widget is descendant rather than the `SearchEntry` itself.
+fn search_has_focus(search_entry: &SearchEntry) -> bool {
+    let Some(root) = search_entry.root() else {
+        return false;
+    };
+    let Some(focus) = gtk4::prelude::RootExt::focus(&root) else {
+        return false;
+    };
+    &focus == search_entry.upcast_ref::<gtk4::Widget>() || focus.is_ancestor(search_entry)
+}
+
 pub struct CarmentaWindow {
     pub window: ApplicationWindow,
     search_entry: SearchEntry,
@@ -245,12 +259,22 @@ impl CarmentaWindow {
             }
         ));
 
-        // Escape dismisses the picker (hide, stay resident).
+        // Escape dismisses the picker (hide, stay resident), except while the
+        // search box has the focus:
+        // there it only leaves the box, so stray Escape after typing doesnt
+        // throw the whole picker away.
+        // Second Escape then dismisses.
         let key_controller = gtk4::EventControllerKey::new();
         key_controller.set_propagation_phase(gtk4::PropagationPhase::Capture);
         let search_entry_for_keys = search_entry.clone();
         key_controller.connect_key_pressed(move |_, key, _, modifier| {
             if key == gtk4::gdk::Key::Escape {
+                if search_has_focus(&search_entry_for_keys) {
+                    if let Some(root) = search_entry_for_keys.root() {
+                        gtk4::prelude::RootExt::set_focus(&root, None::<&gtk4::Widget>);
+                    }
+                    return glib::Propagation::Stop;
+                }
                 crate::app::hide_default();
                 return glib::Propagation::Stop;
             }
