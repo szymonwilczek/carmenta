@@ -101,7 +101,7 @@ Obviously, if you want to do that steps yourself, that's fine and will work the 
 - Launch Carmenta (can be binded to any **Custom Shortcut** as `carmenta`).
 - Type to search (or use Arrows and/or Tab/Ctrl-Tab to navigate around the app).
 - Click to copy & insert.
-- **Esc** to dismiss the picker; use **Quit** from the menu to exit the resident process.
+- **Esc** in the search box only leaves the box (your query stays); **Esc** anywhere else dismisses the picker, so a second **Esc** always closes it. Use **Quit** from the menu to exit the resident process.
 
 ### CLI options
 
