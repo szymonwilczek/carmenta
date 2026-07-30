@@ -97,6 +97,7 @@ fn handle(
             // down from the top bar lands in the open category's items
             (Zone::Input | Zone::Menu | Zone::Other, Key::j) => {
                 focus_grid(&parts);
+                sync_selection(window);
             }
             // up from anywhere in the content area returns to the search box
             (Zone::Grid | Zone::Sidebar, Key::k) => {
@@ -107,6 +108,7 @@ fn handle(
             }
             (Zone::Sidebar, Key::l) => {
                 focus_grid(&parts);
+                sync_selection(window);
             }
             _ => {}
         }
@@ -120,16 +122,19 @@ fn handle(
             let Some(grid) = parts.grid.as_ref() else {
                 return glib::Propagation::Proceed;
             };
-            match key {
-                Key::h => grid.child_focus(DirectionType::Left),
-                Key::j => grid.child_focus(DirectionType::Down),
-                Key::k => grid.child_focus(DirectionType::Up),
-                Key::l => grid.child_focus(DirectionType::Right),
+            let direction = match key {
+                Key::h => DirectionType::Left,
+                Key::j => DirectionType::Down,
+                Key::k => DirectionType::Up,
+                Key::l => DirectionType::Right,
                 Key::Return | Key::KP_Enter | Key::space => {
-                    activate_focused(focus.as_ref())
+                    activate_focused(focus.as_ref());
+                    return glib::Propagation::Stop;
                 }
                 _ => return glib::Propagation::Proceed,
             };
+            grid.child_focus(direction);
+            sync_selection(window);
             glib::Propagation::Stop
         }
         Zone::Sidebar => {
@@ -198,7 +203,19 @@ fn focus_grid(parts: &PageParts) -> bool {
     let Some(grid) = parts.grid.as_ref() else {
         return false;
     };
-    grid.grab_focus() || grid.child_focus(DirectionType::TabForward)
+    if !grid.grab_focus() && !grid.child_focus(DirectionType::TabForward) {
+        return false;
+    }
+
+    // until item has been focused once, the grid takes the focus itself
+    // and no cursor is drawn anywhere;
+    // step onto the first item so entering the zone always shows where the cursor is
+    if let Some(root) = grid.root() {
+        if gtk4::prelude::RootExt::focus(&root).is_some_and(|f| &f == grid.upcast_ref::<Widget>()) {
+            grid.child_focus(DirectionType::TabForward);
+        }
+    }
+    true
 }
 
 /// Focus the category sidebar on the category that is currently open.
@@ -235,6 +252,22 @@ fn move_category(parts: &PageParts, direction: DirectionType) -> bool {
         }
     }
     true
+}
+
+/// Keep the selection highlight on the item the cursor sits on.
+///
+/// `child_focus()` moves the focus ring only; the grid's `SingleSelection`
+/// would otherwise stay behind on whatever was selected before (item 0 by default),
+/// leaving two different items looking picked at once.
+/// `GtkListBase` documents `listitem.select` as public action of the list item widget
+/// wrapping our button, and `activate_action()` walks up to it, so the cursor item
+/// can be selected without having to know its position in the model.
+/// `(modify, extend) = (false, false)` means a plain "select just this one".
+fn sync_selection(window: &ApplicationWindow) {
+    let Some(focus) = gtk4::prelude::RootExt::focus(window) else {
+        return;
+    };
+    let _ = focus.activate_action("listitem.select", Some(&(false, false).to_variant()));
 }
 
 /// Activate the button under the cursor.
