@@ -122,6 +122,7 @@ impl CarmentaApp {
 
     fn on_activate(app: &Application, config: &AppConfig) {
         crate::set_close_on_select(config.close_on_select);
+        crate::set_vim(config.vim);
 
         // prefetching DBus connection to avoid flicker on first insert
         crate::dbus::DBusClient::init_connection();

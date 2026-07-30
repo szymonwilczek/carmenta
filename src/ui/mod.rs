@@ -7,6 +7,7 @@ pub mod kaomoji_grid;
 pub mod search;
 pub mod symbols_data;
 pub mod symbols_grid;
+pub mod vim;
 
 use gtk4::glib;
 use gtk4::prelude::*;

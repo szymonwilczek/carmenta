@@ -31,6 +31,7 @@ _Measured on standard hardware._
   - ∑ **Symbols**: Math, currency, arrows, and more.
   - 🎬 **GIFs**: Search millions of animated GIFs powered by **Klipy**.
 - **Smart History**: Remembers your most used items.
+- **Vim Navigation** (opt-in, `--vim`): `hjkl` to move around, `Alt`+`hjkl` to jump between the search box, categories and items.
 - **"Always on Top"**: Stays visible while you work, but gets out of the way when you don't need it.
 - **Shell Integration**: Uses an optional, companion GNOME Shell extension for reliable text insertion into any application (Wayland workaround).
 
@@ -102,6 +103,7 @@ Obviously, if you want to do that steps yourself, that's fine and will work the 
 - Type to search (or use Arrows and/or Tab/Ctrl-Tab to navigate around the app).
 - Click to copy & insert.
 - **Esc** in the search box only leaves the box (your query stays); **Esc** anywhere else dismisses the picker, so a second **Esc** always closes it. Use **Quit** from the menu to exit the resident process.
+- Prefer Vim keys? Start it as `carmenta --vim` (see [Vim navigation](#-vim-navigation)).
 
 ### CLI options
 
@@ -118,6 +120,7 @@ Available options:
 - `--disable-gifs` - hides GIF tab (can improve performance and lower network usage)
 - `--close-on-select` - dismiss the window automatically after picking an item
 - `--prewarm` - start resident in the background without showing the window (warms render caches so the first invocation is instant)
+- `--vim` - enable Vim-style `hjkl` navigation (see [Vim navigation](#-vim-navigation))
 - `--scale <factor>` - UI scale multiplier for emoji/kaomoji/symbols/GIFs (e.g. `1.25` = 125%), range: `0.5..=4.0`
 
 > Carmenta stays resident after first launch and hides instead of quitting, so
@@ -138,6 +141,32 @@ carmenta --disable-gifs
 # Both combined
 carmenta --width 360 --height 420 --disable-gifs
 ```
+
+## ⌨️ Vim navigation
+
+Off by default. Launch with `--vim` to enable it:
+
+```bash
+carmenta --vim
+```
+- Carmenta always opens with the focus in the **search input**, so you can type straight away - `hjkl` there are ordinary letters.
+- `Alt` + `hjkl` moves **between zones**:
+
+| From                | Key     | Goes to                              |
+| :------------------ | :------ | :----------------------------------- |
+| Search input        | `Alt+l` | Menu ("About") button                |
+| Menu button         | `Alt+h` | Search input                         |
+| Search input / menu | `Alt+j` | Items of the currently open category |
+| Items               | `Alt+k` | Search input                         |
+| Items               | `Alt+h` | Categories sidebar                   |
+| Categories sidebar  | `Alt+l` | Items                                |
+| Categories sidebar  | `Alt+k` | Search input                         |
+
+- Plain `hjkl` moves **inside** the focused zone: left/down/up/right through the items, or up/down through the categories (the category under the cursor opens immediately). These keystrokes never reach the search input.
+- `Enter` (or `Space`) picks exactly the item under the cursor, or opens the category under the cursor.
+- `Esc` still dismisses the picker, and `Ctrl+F` still jumps back to the search input.
+
+Zone jumps that have nowhere to go (for example `Alt+h` on the GIF or search-results page, which have no sidebar) simply do nothing.
 
 ## 🪵 Debugging / logs
 

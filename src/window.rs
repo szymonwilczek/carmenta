@@ -72,6 +72,7 @@ impl CarmentaWindow {
         // GIF grid reads the global scale when creating its picture widgets
         crate::set_scale(config.scale);
         apply_scale_css(config.scale);
+        crate::set_vim(config.vim);
 
         // Menu
         let menu = gio::Menu::new();
@@ -288,6 +289,11 @@ impl CarmentaWindow {
         });
         window.add_controller(key_controller);
 
+        // Vim-style hjkl navigation
+        // Always installed
+        // inert unless --vim
+        crate::ui::vim::install(&window, &search_entry, &menu_button, &stack);
+
         Self {
             window,
             search_entry,
@@ -302,6 +308,7 @@ impl CarmentaWindow {
         // after this point
         crate::set_scale(config.scale);
         apply_scale_css(config.scale);
+        crate::set_vim(config.vim);
     }
 
     /// Show (or re-show) the picker: present, clear any previous query, and
